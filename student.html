@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#38bdf8" />
+<title>Sikho-Sikhao · Hill Quest</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet" />
+<style>
+  html, body { font-family: 'Baloo 2', ui-rounded, system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+  body { background: radial-gradient(900px 500px at 50% 0%, #1e3a8a 0%, #0f172a 70%); min-height: 100dvh; }
+  .screen-in { animation: screenIn .35s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes screenIn { from { opacity: 0; transform: translateX(26px) } to { opacity: 1; transform: none } }
+  @keyframes shake { 0%,100% { transform: translateX(0) } 15% { transform: translateX(-10px) } 35% { transform: translateX(9px) } 55% { transform: translateX(-7px) } 75% { transform: translateX(5px) } }
+  .shake { animation: shake .5s ease; }
+  @keyframes pop { 0% { transform: scale(.6); opacity: 0 } 70% { transform: scale(1.12) } 100% { transform: scale(1); opacity: 1 } }
+  .pop { animation: pop .45s cubic-bezier(.2,.9,.3,1.3) both; }
+  @keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+  .bob { animation: bob 1.6s ease-in-out infinite; }
+  @keyframes speak { 0% { box-shadow: 0 0 0 0 rgba(251,146,60,.8); transform: scale(1) } 50% { transform: scale(1.14) } 100% { box-shadow: 0 0 0 18px rgba(251,146,60,0); transform: scale(1) } }
+  .speaking { animation: speak .7s ease-out 2; }
+  @keyframes fall { 0% { transform: translateY(-20px) rotate(0); opacity: 1 } 100% { transform: translateY(780px) rotate(720deg); opacity: .9 } }
+  .confetti { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px; animation: fall linear forwards; }
+  @keyframes spin { to { transform: rotate(360deg) } }
+  .rays { background: repeating-conic-gradient(from 0deg, rgba(253,224,71,.35) 0 10deg, transparent 10deg 20deg); animation: spin 14s linear infinite; }
+  @keyframes bonus { 0%,100% { transform: scale(1) rotate(-2deg) } 50% { transform: scale(1.07) rotate(2deg) } }
+  .bonus { animation: bonus 1.2s ease-in-out infinite; }
+  @keyframes glow { 0%,100% { box-shadow: 0 0 20px rgba(251,191,36,.6) } 50% { box-shadow: 0 0 46px rgba(251,191,36,1) } }
+  .glow { animation: glow 1.4s ease-in-out infinite; }
+  .opt:active:not(:disabled) { transform: translateY(4px); }
+  .scroll-hide::-webkit-scrollbar { display: none; }
+</style>
+</head>
+<body class="flex items-start sm:items-center justify-center">
+
+<div id="phone" class="relative w-full max-w-[400px] h-[100dvh] sm:h-[min(calc(100dvh-24px),740px)] sm:my-3 sm:rounded-[2.6rem] sm:border-[10px] sm:border-slate-900 sm:ring-2 sm:ring-slate-700 sm:shadow-2xl bg-sky-100 overflow-hidden flex flex-col">
+  <div id="hdr"></div>
+  <main id="screen" class="flex-1 overflow-y-auto scroll-hide"></main>
+  <div id="fx" class="absolute inset-0 pointer-events-none overflow-hidden z-40"></div>
+</div>
+
+<script>
+/* ================================================================
+   CONFIG + MOCK DATA  (Class 5 Math · Fractions · Pineapple)
+   ================================================================ */
+const params = new URLSearchParams(location.search);
+const TEACH_SECONDS = +params.get('lock') || 10;   // 10s demo. Use ?lock=60 for the real 60s lock-in
+const FAST_MS = 1000;                              // under this = flag_fast_guess
+let POD_CODE = '';
+let LESSON_ID = '';
+
+const KIDS = [
+  { name: 'Hornbill', emoji: '🦜', role: 'Reporter',  grad: 'from-amber-400 to-orange-500' },
+  { name: 'Elephant', emoji: '🐘', role: 'Checker',   grad: 'from-slate-400 to-slate-500' },
+  { name: 'Panda',    emoji: '🐼', role: 'Explainer', grad: 'from-zinc-400 to-zinc-600' },
+  { name: 'Tiger',    emoji: '🐯', role: 'Leader',    grad: 'from-orange-400 to-red-500' }
+];
+
+const DEMO_PARTS = [
+  { title: 'Equal slices', story: 'Cut a pineapple into 4 equal slices.', point: 'Each slice is 1/4.',
+    visual: { t: 's', total: 4, take: 1 },
+    q: { text: 'You take 1 of 4 slices. Fraction?', options: ['1/4', '1/2', '4/1'], answer: '1/4' },
+    hints: ['Count all slices. That is the bottom.', 'Bottom is 4. You took 1.'],
+    teach: { say: 'Say: 4 equal slices. One is 1/4.', show: 'Show: draw 4 slices. Colour 1.', ask: 'Ask: What is one slice?' } },
+  { title: 'Top and bottom', story: 'Eat 2 of the 4 slices.', point: 'Top = eaten. Bottom = all.',
+    visual: { t: 's', total: 4, take: 2 },
+    q: { text: 'You eat 2 of 4 slices. Fraction?', options: ['2/4', '4/2', '2/2'], answer: '2/4' },
+    hints: ['Top number is what you took.', 'Took 2. Total is 4. So 2 over 4.'],
+    teach: { say: 'Say: top is eaten, bottom is all.', show: 'Show: colour 2 of 4 slices.', ask: 'Ask: What is 3 of 4?' } },
+  { title: 'Which is bigger?', story: 'Half a pineapple beats a quarter.', point: '1/2 is bigger than 1/4.',
+    visual: { t: 'c' },
+    q: { text: 'Which is bigger?', options: ['1/2', '1/4', 'Same'], answer: '1/2' },
+    hints: ['More slices means smaller slices.', 'Half is 2 parts. Quarter is 4 parts.'],
+    teach: { say: 'Say: fewer parts, bigger piece.', show: 'Show: fold paper in 2, then 4.', ask: 'Ask: Is 1/3 or 1/5 bigger?' } },
+  { title: 'Add the slices', story: 'Add slices of the same size.', point: 'Add top. Keep bottom.',
+    visual: { t: 'a' },
+    q: { text: '1/4 + 2/4 = ?', options: ['3/4', '3/8', '2/4'], answer: '3/4' },
+    hints: ['Same bottom. Only add the tops.', '1 + 2 = 3. Bottom stays 4.'],
+    teach: { say: 'Say: add tops. Keep the bottom.', show: 'Show: join 1 slice and 2 slices.', ask: 'Ask: What is 1/5 + 2/5?' } }
+];
+
+const DEMO_SOLO = [
+  { text: 'Mango cut in 8 equal parts. One part?', options: ['1/8', '1/4', '8/1'], answer: '1/8' },
+  { text: 'You eat 3 of 4 slices. Fraction?', options: ['3/4', '4/3', '1/3'], answer: '3/4' },
+  { text: 'Which is bigger?', options: ['1/6', '1/3', 'Same'], answer: '1/3' },
+  { text: '2/5 + 1/5 = ?', options: ['3/5', '3/10', '2/5'], answer: '3/5' }
+];
+
+const DEMO_LESSON = { id: 'class5-fractions-pineapple', code: '4092', title: 'Fractions · Pineapple slices', context: 'Pineapple slices', emoji: '🍍', parts: DEMO_PARTS, solo: DEMO_SOLO };
+let LESSON = DEMO_LESSON, PARTS = DEMO_PARTS, SOLO = DEMO_SOLO;
+
+/* ---- Lesson download: lesson code -> lesson JSON published by the Teacher Dashboard ---- */
+function isValidLesson(l) {
+  return !!(l && Array.isArray(l.parts) && l.parts.length === 4 && l.parts.every(p => p && p.q && Array.isArray(p.q.options) && p.q.answer && Array.isArray(p.hints) && p.teach && p.visual)
+    && Array.isArray(l.solo) && l.solo.length >= 1 && l.solo.every(q => q && Array.isArray(q.options) && q.answer));
+}
+function askParent(code) {   // fallback relay through index.html (works even when storage is blocked)
+  return new Promise(res => {
+    if (window.parent === window) return res(null);
+    const h = e => { if (e.data && e.data.type === 'sikho-lesson-reply' && e.data.code === code) { removeEventListener('message', h); res(e.data.lesson); } };
+    addEventListener('message', h);
+    try { window.parent.postMessage({ type: 'sikho-lesson-request', code }, '*'); } catch (e) { return res(null); }
+    setTimeout(() => { removeEventListener('message', h); res(null); }, 700);
+  });
+}
+async function fetchLesson(code) {
+  if (code === DEMO_LESSON.code) return DEMO_LESSON;
+  try { const raw = localStorage.getItem('sikho_lesson_' + code); if (raw) return JSON.parse(raw); } catch (e) {}
+  return askParent(code);
+}
+function beginWith(lesson) {
+  LESSON = lesson; PARTS = lesson.parts; SOLO = lesson.solo; POD_CODE = lesson.code; LESSON_ID = lesson.id || ('lesson-' + lesson.code);
+  freshState(); go('pass', { kid: 0, passMode: 'learn' });
+}
+
+/* ================================================================
+   STATE
+   ================================================================ */
+/* Each phone has a fixed Phone number = one Pod (A, B, C, D) under the same lesson code */
+let PHONE = 1; try { PHONE = +(new URLSearchParams(location.search).get('phone') || localStorage.getItem('sikho_phone') || 1) || 1; } catch (e) {}
+const podId = () => 'Pod ' + String.fromCharCode(64 + PHONE);
+function cyclePhone() { PHONE = PHONE % 4 + 1; try { localStorage.setItem('sikho_phone', PHONE); } catch (e) {} S.noAnim = true; render(); }
+
+let S;
+function freshState() {
+  S = {
+    screen: 'welcome', entry: '', conn: 'idle', connStep: 0, kid: 0, l: null, t: null, s: null, sync: 'idle', syncData: null, showJson: false,
+    data: KIDS.map(k => ({
+      name: k.name, role: k.role,
+      learn: { part: null, attempts: 0, hints_used: 0, attempt_log: [], flag_fast_guess: false, completed: false },
+      teach: { lock_seconds: TEACH_SECONDS, feedback: [], confused_count: 0 },
+      solo: { score: 0, total: SOLO.length, answers: [], flag_fast_guess_count: 0 }
+    }))
+  };
+}
+freshState();
+
+const $ = s => document.querySelector(s);
+const shuffle = a => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
+const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+
+/* ================================================================
+   UI ATOMS
+   ================================================================ */
+const BTN = 'w-full rounded-2xl py-4 text-2xl font-extrabold border-b-[6px] active:border-b-2 active:translate-y-1 transition-all select-none';
+const B_GREEN = BTN + ' bg-emerald-500 border-emerald-700 text-white';
+const B_ORANGE = BTN + ' bg-orange-400 border-orange-600 text-white';
+const B_OFF = BTN + ' bg-slate-300 border-slate-400 text-slate-500 cursor-not-allowed';
+
+function speaker(text) {
+  const t = text.replace(/"/g, '&quot;');
+  return `<button aria-label="Read aloud" data-say="${t}" onclick="speak(this)" class="shrink-0 w-14 h-14 rounded-full bg-orange-400 border-b-4 border-orange-600 text-2xl grid place-items-center active:translate-y-0.5 shadow">🔊</button>`;
+}
+function instr(text) {
+  return `<div class="flex items-center gap-3">${speaker(text)}<p class="text-2xl font-extrabold text-slate-800 leading-tight">${text}</p></div>`;
+}
+function speak(btn) {
+  btn.classList.remove('speaking'); void btn.offsetWidth; btn.classList.add('speaking');
+  setTimeout(() => btn.classList.remove('speaking'), 1500);
+  try {                                    // best effort: uses an on-device voice only if one exists
+    if ('speechSynthesis' in window) { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(btn.dataset.say); u.rate = .85; speechSynthesis.speak(u); }
+  } catch (e) {}
+}
+function avatar(i, size = 'w-12 h-12 text-2xl') {
+  const k = KIDS[i];
+  return `<div class="${size} rounded-full bg-gradient-to-br ${k.grad} grid place-items-center shadow ring-2 ring-white shrink-0">${k.emoji}</div>`;
+}
+
+function visual(v) {
+  if (v.t === 'n') return '<div class="text-center text-6xl py-2">' + (LESSON.emoji || '⭐') + '</div>';
+  if (v.t === 's') {
+    const cells = Array.from({ length: v.total }, (_, i) => i < v.take
+      ? '<div class="flex-1 h-14 rounded-xl bg-yellow-300 border-2 border-orange-500 grid place-items-center text-xl">' + (LESSON.emoji || '🍍') + '</div>'
+      : '<div class="flex-1 h-14 rounded-xl bg-yellow-50 border-2 border-dashed border-yellow-300"></div>').join('');
+    return `<div class="flex gap-2">${cells}</div><div class="text-center mt-2 text-3xl font-extrabold text-orange-600">${v.take}/${v.total}</div>`;
+  }
+  if (v.t === 'c') return `
+    <div class="space-y-2">
+      <div class="flex items-center gap-2"><div class="h-9 rounded-lg bg-orange-400 border-2 border-orange-600" style="width:50%"></div><span class="font-extrabold text-orange-600 text-xl">1/2</span></div>
+      <div class="flex items-center gap-2"><div class="h-9 rounded-lg bg-sky-400 border-2 border-sky-600" style="width:25%"></div><span class="font-extrabold text-sky-600 text-xl">1/4</span></div>
+    </div>`;
+  return `<div class="flex gap-2">
+      <div class="flex-1 h-14 rounded-xl bg-orange-300 border-2 border-orange-500"></div>
+      <div class="flex-1 h-14 rounded-xl bg-sky-300 border-2 border-sky-500"></div>
+      <div class="flex-1 h-14 rounded-xl bg-sky-300 border-2 border-sky-500"></div>
+      <div class="flex-1 h-14 rounded-xl bg-yellow-50 border-2 border-dashed border-yellow-300"></div>
+    </div><div class="text-center mt-2 text-3xl font-extrabold text-emerald-600">1/4 + 2/4 = 3/4</div>`;
+}
+
+/* ================================================================
+   HEADER  (Hill Quest progress)
+   ================================================================ */
+function stepIndex() {
+  if (S.screen === 'learn') return S.kid * 2;
+  if (S.screen === 'teach') return S.kid * 2 + 1;
+  if (S.screen === 'solo') return 8 + S.kid;
+  if (S.screen === 'summit') return 12;
+  if (S.screen === 'pass') return S.passMode === 'solo' ? 8 + S.kid : S.kid * 2;
+  return 0;
+}
+function renderHeader() {
+  const pct = Math.round(stepIndex() / 12 * 100);
+  const show = S.screen !== 'welcome';
+  $('#hdr').innerHTML = `
+  <div class="px-4 pt-3 pb-3 bg-gradient-to-b from-sky-500 to-sky-400 shrink-0">
+    <div class="flex items-center justify-between">
+      ${show && S.screen !== 'summit' ? `<div class="flex items-center gap-2 bg-white/95 rounded-full pr-4 pl-1 py-1 font-extrabold text-slate-700">${avatar(S.kid, 'w-9 h-9 text-xl')}${KIDS[S.kid].name}</div>` : '<div class="font-extrabold text-white text-lg">🏔️ Hill Quest</div>'}
+      <div class="bg-white/95 rounded-full px-3 py-1.5 text-xs font-extrabold text-slate-600 tracking-wider">LESSON ${POD_CODE || '····'} · POD ${podId().slice(-1)}</div>
+    </div>
+    <div class="relative mt-4 mb-1">
+      <div class="h-3.5 rounded-full bg-white/50 overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-lime-300 transition-all duration-700" style="width:${pct}%"></div></div>
+      <div class="absolute -top-3 text-2xl transition-all duration-700" style="left:calc(${pct}% - 14px)">${S.screen === 'welcome' ? '🧗' : (S.screen === 'summit' ? '🎉' : '🧗')}</div>
+      <div class="absolute -top-4 -right-1 text-2xl">🚩</div>
+    </div>
+  </div>`;
+}
+
+/* ================================================================
+   SCREENS
+   ================================================================ */
+function go(screen, extra) { clearInterval(S.t && S.t.iv); S.screen = screen; Object.assign(S, extra || {}); render(); $('#screen').scrollTop = 0; }
+
+function render() {
+  renderHeader();
+  const root = $('#screen');
+  const fn = { welcome: vWelcome, pass: vPass, learn: vLearn, teach: vTeach, solo: vSolo, summit: vSummit }[S.screen];
+  const inner = fn();
+  const keepAnim = S.noAnim; S.noAnim = false;
+  root.innerHTML = `<div class="${keepAnim ? '' : 'screen-in'} min-h-full p-4 pb-6 bg-gradient-to-b from-sky-100 via-sky-50 to-emerald-100 flex flex-col gap-4">${inner}</div>`;
+  if (S.screen === 'learn' && S.l && !S.l.solved) { S.l.tStart = performance.now(); S.l.shake = false; }
+  if (S.screen === 'solo' && S.s && !S.s.locked) S.s.tStart = performance.now();
+}
+
+/* ---- Welcome / Lesson Code entry ---- */
+function vWelcome() {
+  const code = S.entry || '';
+  const boxes = [0, 1, 2, 3].map(i => `<div class="w-14 h-16 rounded-2xl text-4xl font-extrabold grid place-items-center shadow border-b-4 ${code[i] ? 'bg-gradient-to-br from-sky-400 to-emerald-400 text-white border-emerald-600 pop' : 'bg-white text-slate-300 border-slate-200'}">${code[i] || '·'}</div>`).join('');
+  const busy = S.conn === 'loading';
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', '✓'].map(k => {
+    const del = k === '⌫', go_ = k === '✓', on = !go_ || code.length === 4;
+    const act = del ? 'keyDel()' : go_ ? 'connectPod()' : `keyTap('${k}')`;
+    const cls = go_ ? (on ? 'bg-emerald-500 border-emerald-700 text-white' : 'bg-slate-200 border-slate-300 text-slate-400') : del ? 'bg-orange-300 border-orange-500 text-white' : 'bg-white border-slate-300 text-slate-700';
+    return `<button ${busy ? 'disabled' : ''} onclick="${act}" class="h-14 rounded-2xl text-2xl font-extrabold border-b-4 active:translate-y-0.5 active:border-b-0 transition ${cls}">${k}</button>`;
+  }).join('');
+  let status;
+  if (busy) status = `<div class="bg-white rounded-2xl p-3 shadow space-y-1.5 font-extrabold text-slate-700 text-lg">${['Find router', 'Get my lesson'].map((l, n) => `<div class="flex items-center gap-2">${n < S.connStep ? '✅' : '<span class="inline-block animate-spin">⏳</span>'} ${l}</div>`).join('')}</div>`;
+  else if (S.conn === 'error') status = `<div class="shake bg-rose-100 border-2 border-rose-300 rounded-2xl p-3 flex items-center gap-3">${speaker('Code not found. Ask your teacher.')}<div class="font-extrabold text-rose-700 leading-tight">Code not found.<br><span class="text-sm font-bold">Ask your teacher.</span></div></div>`;
+  else status = instr('Type the 4-digit lesson code.');
+  return `
+  <div class="text-center">
+    <div class="text-5xl bob">🏔️</div>
+    <h1 class="text-3xl font-extrabold text-sky-700 leading-none">Hill Quest</h1>
+    <p class="text-slate-500 font-bold text-sm">Sikho-Sikhao · Four friends, one phone</p>
+  </div>
+  <div class="flex justify-center gap-2">${boxes}</div>
+  ${status}
+  <div class="grid grid-cols-3 gap-2.5">${keys}</div>
+  <button ${busy ? 'disabled' : ''} onclick="S.entry='4092';S.conn='idle';S.noAnim=true;render()" class="text-xs font-extrabold text-sky-700 bg-white/70 rounded-xl py-2">Demo code: 4092 (built-in lesson)</button>`;
+}
+function keyTap(d) { if (S.conn === 'loading' || S.entry.length >= 4) return; S.entry += d; S.conn = 'idle'; S.noAnim = true; render(); }
+function keyDel() { if (S.conn === 'loading') return; S.entry = S.entry.slice(0, -1); S.conn = 'idle'; S.noAnim = true; render(); }
+async function connectPod() {
+  if (S.entry.length !== 4 || S.conn === 'loading') return;
+  const code = S.entry, t0 = Date.now();
+  S.conn = 'loading'; S.connStep = 0; S.noAnim = true; render();
+  setTimeout(() => { if (S.screen === 'welcome' && S.conn === 'loading') { S.connStep = 1; S.noAnim = true; render(); } }, 700);
+  const lesson = await fetchLesson(code);
+  await new Promise(r => setTimeout(r, Math.max(0, 1400 - (Date.now() - t0))));
+  if (S.screen !== 'welcome') return;
+  if (isValidLesson(lesson)) beginWith(lesson);
+  else { S.conn = 'error'; S.entry = ''; S.noAnim = true; render(); buzz(200); }
+}
+
+/* ---- Pass the phone ---- */
+function vPass() {
+  const k = KIDS[S.kid], solo = S.passMode === 'solo';
+  const line = solo ? 'Pass the phone to ' + k.name : k.name + ' learns part ' + (S.kid + 1);
+  return `
+  <div class="flex-1 flex flex-col items-center justify-center text-center gap-5">
+    <div class="text-7xl bob">${solo ? '🤫' : '📲'}</div>
+    ${avatar(S.kid, 'w-28 h-28 text-6xl')}
+    <h2 class="text-3xl font-extrabold text-slate-800 leading-tight">${solo ? 'Pass phone to' : 'Your turn,'}<br><span class="text-orange-500">${k.name}</span></h2>
+    ${solo ? '<div class="bg-amber-100 border-2 border-amber-300 rounded-2xl px-4 py-2 font-extrabold text-amber-700">🙈 Friends: look away!</div>' : `<div class="bg-white rounded-2xl px-4 py-2 font-extrabold text-sky-700 shadow">Part ${S.kid + 1} · ${PARTS[S.kid].title}</div>`}
+    ${instr(solo ? 'No help. One try only.' : 'Tap when you are ready.')}
+  </div>
+  <button class="${B_GREEN}" onclick="${solo ? 'startSolo()' : 'startLearn()'}">I AM ${k.name.toUpperCase()}</button>`;
+}
+
+/* ---- LEARN ---- */
+function startLearn() {
+  const p = PARTS[S.kid];
+  S.data[S.kid].learn.part = S.kid + 1;
+  S.l = { order: shuffle(p.q.options), hints: 0, attempts: 0, solved: false, elim: [], shake: false, tStart: 0, busy: false };
+  go('learn');
+}
+function vLearn() {
+  const p = PARTS[S.kid], L = S.l;
+  const optColors = ['bg-sky-500 border-sky-700', 'bg-orange-400 border-orange-600', 'bg-emerald-500 border-emerald-700'];
+  const hintHtml = L.hints > 0 ? `
+    <div class="pop bg-amber-100 border-2 border-amber-300 rounded-2xl p-3 flex gap-3 items-start">
+      <div class="text-3xl">💡</div>
+      <div class="flex-1"><div class="text-xs font-extrabold text-amber-600 tracking-widest">HINT ${Math.min(L.hints, 2)}${L.hints >= 3 ? ' · WRONG ONES GONE' : ''}</div>
+      <div class="text-lg font-bold text-slate-800 leading-snug">${p.hints[Math.min(L.hints, 2) - 1]}</div></div>
+      ${speaker(p.hints[Math.min(L.hints, 2) - 1])}
+    </div>` : '';
+  const opts = L.order.map((o, i) => {
+    const gone = L.elim.includes(o);
+    const right = L.solved && o === p.q.answer;
+    const cls = right ? 'bg-emerald-500 border-emerald-700 pop' : gone ? 'bg-slate-200 border-slate-300 text-slate-400 opacity-50' : optColors[i % 3];
+    return `<button class="opt ${BTN} ${cls} text-white" ${gone || L.solved ? 'disabled' : ''} onclick="learnTap(${i})">${right ? '✅ ' : ''}${o}</button>`;
+  }).join('');
+  return `
+  ${instr(L.solved ? 'Great job! Keep going.' : 'Read. Then pick one.')}
+  <div class="bg-white rounded-3xl p-4 shadow">
+    <div class="flex items-center justify-between mb-2"><span class="text-xs font-extrabold tracking-widest text-sky-500">PART ${S.kid + 1} · ${p.title.toUpperCase()}</span><span class="text-xs font-extrabold bg-orange-100 text-orange-600 rounded-full px-2.5 py-1 max-w-[55%] truncate">${LESSON.emoji || '🌍'} ${LESSON.context}</span></div>
+    ${visual(p.visual)}
+    <p class="mt-3 text-xl font-extrabold text-slate-800 leading-snug">${p.story}</p>
+    <p class="text-lg font-bold text-emerald-600">${p.point}</p>
+  </div>
+  <div class="bg-white rounded-3xl p-4 shadow">
+    <div class="flex items-start gap-3">${speaker(p.q.text)}<p class="text-xl font-extrabold text-slate-800 leading-snug">${p.q.text}</p></div>
+  </div>
+  ${hintHtml}
+  <div id="opts" class="space-y-3 ${L.shake ? 'shake' : ''}">${opts}</div>
+  <div class="flex items-center justify-center gap-2 text-sm font-extrabold text-slate-500">${[0, 1, 2].map(n => `<span class="w-3 h-3 rounded-full ${n < L.hints ? 'bg-amber-400' : 'bg-slate-300'}"></span>`).join('')}<span class="ml-1">hints</span></div>
+  ${L.solved ? `<button class="${B_GREEN} pop" onclick="go('teach_init')">NEXT ➜</button>` : ''}`;
+}
+function learnTap(i) {
+  const L = S.l; if (L.solved) return;
+  const p = PARTS[S.kid], K = S.data[S.kid].learn;
+  const picked = L.order[i];
+  const ms = Math.round(performance.now() - L.tStart);          // SECRET TELEMETRY: render -> tap
+  const ok = picked === p.q.answer, fast = ms < FAST_MS;
+  L.attempts++; K.attempts++;
+  if (fast) K.flag_fast_guess = true;                           // silent background flag
+  K.attempt_log.push({ attempt: K.attempts, question: p.q.text, answer: picked, correct: ok, time_ms: ms, flag_fast_guess: fast });
+  if (ok) { L.solved = true; K.completed = true; S.noAnim = true; burst(18); render(); return; }
+  buzz(160);
+  L.hints = Math.min(L.hints + 1, 3); K.hints_used = L.hints;   // hint ladder: 1, 2, then remove wrong options
+  if (L.hints >= 3) L.elim = p.q.options.filter(o => o !== p.q.answer);
+  L.order = shuffle(L.order); L.shake = true; S.noAnim = true;
+  render();
+}
+
+/* ---- TEACH (time lock) ---- */
+function startTeach() {
+  S.t = { endAt: Date.now() + TEACH_SECONDS * 1000, left: TEACH_SECONDS, fb: [null, null, null], unlocked: false, iv: null };
+  S.screen = 'teach'; render();
+  S.t.iv = setInterval(tickTeach, 200);
+}
+function tickTeach() {
+  const t = S.t; if (!t || S.screen !== 'teach') return clearInterval(t && t.iv);
+  const left = Math.max(0, Math.ceil((t.endAt - Date.now()) / 1000));
+  if (left !== t.left) {
+    t.left = left;
+    const c = $('#tCount'), r = $('#tRing'), b = $('#nextBtn');
+    if (c) c.textContent = left;
+    if (r) r.style.strokeDashoffset = 276.46 * (1 - left / TEACH_SECONDS);
+    if (b && left > 0) b.textContent = '🔒 WAIT ' + left + 's';
+  }
+  if (left === 0 && !t.unlocked) { t.unlocked = true; clearInterval(t.iv); buzz(120); S.noAnim = true; render(); }
+}
+function listeners() { return [0, 1, 2, 3].filter(i => i !== S.kid); }
+function vTeach() {
+  if (S.screen === 'teach' && !S.t) return '';
+  const p = PARTS[S.kid], t = S.t, ls = listeners();
+  const done = !t.fb.includes(null);
+  const canNext = t.unlocked && done;
+  const rows = [['1', '🗣️', 'Say it', p.teach.say, 'bg-sky-500'], ['2', '✋', 'Show it', p.teach.show, 'bg-orange-400'], ['3', '❓', 'Ask it', p.teach.ask, 'bg-emerald-500']].map(r => `
+    <div class="bg-white rounded-2xl p-3 shadow flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl ${r[4]} text-white font-extrabold text-xl grid place-items-center shrink-0">${r[0]}</div>
+      <div class="flex-1"><div class="font-extrabold text-slate-800 text-lg leading-none">${r[1]} ${r[2]}</div><div class="text-sm font-bold text-slate-500 leading-snug mt-0.5">${r[3]}</div></div>
+    </div>`).join('');
+  const fb = ls.map((li, j) => `
+    <div class="flex items-center justify-between gap-2 ${t.unlocked ? '' : 'opacity-40'}">
+      <div class="flex items-center gap-2">${avatar(li, 'w-10 h-10 text-xl')}<span class="font-extrabold text-slate-700">${KIDS[li].name}</span></div>
+      <div class="flex gap-2">
+        ${['😀', '😕'].map(e => `<button ${t.unlocked ? '' : 'disabled'} onclick="fbTap(${j},'${e}')" class="w-14 h-12 rounded-xl text-3xl border-b-4 transition ${t.fb[j] === e ? 'bg-emerald-200 border-emerald-500 scale-110' : 'bg-slate-100 border-slate-300'}">${e}</button>`).join('')}
+      </div>
+    </div>`).join('');
+  return `
+  ${instr('Teach 3 friends. Use steps.')}
+  <div class="bg-white rounded-3xl p-4 shadow flex items-center gap-4">
+    <div class="relative w-24 h-24 shrink-0">
+      <svg viewBox="0 0 100 100" class="w-24 h-24 -rotate-90"><circle cx="50" cy="50" r="44" fill="none" stroke="#e2e8f0" stroke-width="10"/><circle id="tRing" cx="50" cy="50" r="44" fill="none" stroke="${t.unlocked ? '#10b981' : '#fb923c'}" stroke-width="10" stroke-linecap="round" stroke-dasharray="276.46" style="stroke-dashoffset:${276.46 * (1 - t.left / TEACH_SECONDS)};transition:stroke-dashoffset .3s linear"/></svg>
+      <div class="absolute inset-0 grid place-items-center text-3xl font-extrabold ${t.unlocked ? 'text-emerald-600' : 'text-orange-500'}" id="tCount">${t.unlocked ? '✓' : t.left}</div>
+    </div>
+    <div><div class="text-xl font-extrabold text-slate-800 leading-tight">${t.unlocked ? 'Time is up!' : 'Keep teaching…'}</div><div class="text-sm font-bold text-slate-500">${t.unlocked ? 'Listeners, tap a face.' : 'Next unlocks at zero.'}</div></div>
+  </div>
+  <div class="space-y-2">${rows}</div>
+  <div class="bg-white rounded-3xl p-4 shadow space-y-3">
+    <div class="flex items-center gap-3">${speaker('Listeners. Tap how you feel.')}<div class="font-extrabold text-slate-800 text-lg leading-tight">Listeners: got it?</div></div>
+    ${fb}
+  </div>
+  <button id="nextBtn" ${canNext ? '' : 'disabled'} class="${canNext ? B_GREEN + ' pop' : B_OFF}" onclick="teachNext()">${canNext ? 'NEXT ➜' : (t.unlocked ? '🔒 TAP ALL FACES' : '🔒 WAIT ' + t.left + 's')}</button>`;
+}
+function startTeachWrapper() { startTeach(); }
+function fbTap(j, e) { if (!S.t || !S.t.unlocked) return; S.t.fb[j] = e; S.noAnim = true; render(); }
+function teachNext() {
+  const t = S.t;
+  if (!t || Date.now() < t.endAt || !t.unlocked || t.fb.includes(null)) return;   // hard guard, UI lock is not the only lock
+  const T = S.data[S.kid].teach; T.feedback = [...t.fb]; T.confused_count = t.fb.filter(f => f === '😕').length;
+  clearInterval(t.iv);
+  if (S.kid < 3) go('pass', { kid: S.kid + 1, passMode: 'learn' });
+  else go('pass', { kid: 0, passMode: 'solo' });
+}
+
+/* ---- SOLO CHECK ---- */
+function startSolo() { S.s = { qi: 0, order: shuffle(SOLO[0].options), locked: false, picked: null, tStart: 0 }; go('solo'); }
+function vSolo() {
+  const s = S.s, q = SOLO[s.qi];
+  const opts = s.order.map((o, i) => {
+    let cls = ['bg-sky-500 border-sky-700', 'bg-orange-400 border-orange-600', 'bg-emerald-500 border-emerald-700'][i % 3] + ' text-white';
+    if (s.locked) {
+      if (o === q.answer) cls = 'bg-emerald-500 border-emerald-700 text-white pop';
+      else if (o === s.picked) cls = 'bg-rose-500 border-rose-700 text-white shake';
+      else cls = 'bg-slate-200 border-slate-300 text-slate-400 opacity-60';
+    }
+    return `<button class="opt ${BTN} ${cls}" ${s.locked ? 'disabled' : ''} onclick="soloTap(${i})">${o}</button>`;
+  }).join('');
+  return `
+  ${instr('Solo check. One try only.')}
+  <div class="flex items-center justify-center gap-2">${SOLO.map((_, n) => `<span class="h-3 rounded-full transition-all ${n < s.qi ? 'w-8 bg-emerald-400' : n === s.qi ? 'w-8 bg-orange-400' : 'w-3 bg-slate-300'}"></span>`).join('')}</div>
+  <div class="text-center text-xs font-extrabold tracking-widest text-slate-400">QUESTION ${s.qi + 1} OF ${SOLO.length}</div>
+  <div class="bg-white rounded-3xl p-5 shadow"><div class="flex items-start gap-3">${speaker(q.text)}<p class="text-2xl font-extrabold text-slate-800 leading-snug">${q.text}</p></div></div>
+  <div class="space-y-3">${opts}</div>`;
+}
+function soloTap(i) {
+  const s = S.s; if (s.locked) return;
+  const q = SOLO[s.qi], K = S.data[S.kid].solo;
+  const picked = s.order[i], ms = Math.round(performance.now() - s.tStart);
+  const ok = picked === q.answer, fast = ms < FAST_MS;
+  s.locked = true; s.picked = picked;
+  if (ok) K.score++; if (fast) K.flag_fast_guess_count++;
+  K.answers.push({ q: s.qi + 1, question: q.text, picked, correct: ok, time_ms: ms, flag_fast_guess: fast });
+  if (!ok) buzz(160);
+  S.noAnim = true; render();
+  setTimeout(() => {
+    if (S.screen !== 'solo') return;
+    if (s.qi < SOLO.length - 1) { s.qi++; s.order = shuffle(SOLO[s.qi].options); s.locked = false; s.picked = null; S.noAnim = true; render(); }
+    else if (S.kid < 3) go('pass', { kid: S.kid + 1, passMode: 'solo' });
+    else enterSummit();
+  }, 1100);
+}
+
+/* ---- SUMMIT ---- */
+function enterSummit() { S.syncData = generateSyncData(); go('summit'); }
+function vSummit() {
+  const bonus = S.data.every(d => d.solo.score >= 3);
+  const rows = S.data.map((d, i) => `
+    <div class="bg-white rounded-2xl p-3 shadow flex items-center gap-3 pop" style="animation-delay:${i * 120}ms">
+      ${avatar(i, 'w-12 h-12 text-2xl')}
+      <div class="flex-1"><div class="font-extrabold text-slate-800 leading-none">${d.name}</div><div class="text-xl tracking-wider mt-1">${[0, 1, 2, 3].map(n => n < d.solo.score ? '⭐' : '<span class="opacity-25">⭐</span>').join('')}</div></div>
+      <div class="text-2xl font-extrabold ${d.solo.score >= 3 ? 'text-emerald-600' : 'text-orange-500'}">${d.solo.score}/4</div>
+    </div>`).join('');
+  const sync = S.sync === 'idle' ? `<button class="${B_ORANGE}" onclick="syncNow()">📡 SEND TO TEACHER</button>`
+    : S.sync === 'running' ? `<div class="bg-white rounded-2xl p-4 shadow space-y-2 font-extrabold text-slate-700">${['Find router', 'Send my data', 'Get new lesson'].map((l, n) => `<div class="flex items-center gap-2">${n < S.syncStep ? '✅' : n === S.syncStep ? '<span class="inline-block animate-spin">⏳</span>' : '⚪'} ${l}</div>`).join('')}</div>`
+    : `<div class="pop bg-emerald-100 border-2 border-emerald-300 rounded-2xl p-4 text-center font-extrabold text-emerald-700 text-lg">✅ Sent ${S.syncData.size_kb} kb to teacher!<div class="text-sm font-bold text-emerald-600">New lesson downloaded.</div></div>`;
+  return `
+  ${bonus ? `<div class="relative rounded-3xl overflow-hidden bg-gradient-to-br from-amber-300 via-orange-400 to-rose-400 p-5 text-center glow">
+      <div class="rays absolute -inset-20 opacity-70"></div>
+      <div class="relative"><div class="text-6xl bob">🏆</div><div class="bonus text-4xl font-extrabold text-white drop-shadow leading-none mt-1">TEAM BONUS!</div><div class="font-extrabold text-white/95 mt-1">All 4 reached the summit!</div></div></div>`
+    : `<div class="text-center"><div class="text-6xl bob">⛰️</div><h2 class="text-3xl font-extrabold text-sky-700 leading-none mt-1">Summit!</h2><p class="font-bold text-slate-500">Climb again to win the bonus.</p></div>`}
+  ${instr(bonus ? 'Hooray! Team bonus won!' : 'Good climb, everyone!')}
+  <div class="space-y-2">${rows}</div>
+  ${S.sync === 'idle' ? `<button onclick="cyclePhone()" class="w-full text-sm font-extrabold text-slate-700 bg-white rounded-xl py-2.5 shadow">📱 Phone ${PHONE} · ${podId()} · Lesson ${POD_CODE} <span class="text-sky-600">(tap to change)</span></button>` : ''}
+  ${sync}
+  <button class="w-full text-sm font-extrabold text-sky-700 bg-white/70 rounded-xl py-2" onclick="S.showJson=!S.showJson;S.noAnim=true;render()">${S.showJson ? 'Hide' : 'Show'} sync data (for teacher demo)</button>
+  ${S.showJson ? `<pre class="bg-slate-900 text-emerald-300 text-[10px] leading-snug rounded-2xl p-3 overflow-x-auto max-h-64">${JSON.stringify(S.syncData, null, 2).replace(/</g, '&lt;')}</pre>` : ''}
+  <button class="${B_GREEN}" onclick="freshState();go('welcome')">↻ PLAY AGAIN</button>`;
+}
+function syncNow() {
+  S.sync = 'running'; S.syncStep = 0; S.syncData = generateSyncData(); S.noAnim = true; render();
+  [700, 1400, 2100].forEach((t, n) => setTimeout(() => {
+    if (n < 2) { S.syncStep = n + 1; S.noAnim = true; render(); }
+    else {
+      S.sync = 'done'; S.syncStep = 3; S.noAnim = true; render(); burst(30);
+      /* separate tabs: outbox in localStorage + BroadcastChannel; inside index.html: postMessage */
+      try { const ob = JSON.parse(localStorage.getItem('sikho_outbox') || '[]').filter(x => !(x.pod_code === S.syncData.pod_code && x.pod_id === S.syncData.pod_id)); ob.push(S.syncData); localStorage.setItem('sikho_outbox', JSON.stringify(ob)); } catch (e) {}
+      try { new BroadcastChannel('sikho').postMessage({ payload: S.syncData }); } catch (e) {}
+      try { window.parent !== window && window.parent.postMessage({ type: 'sikho-sync', payload: S.syncData }, '*'); } catch (e) {}
+    }
+  }, t));
+}
+
+/* ================================================================
+   generateSyncData(): payload the phone uploads to the teacher laptop
+   ================================================================ */
+function generateSyncData() {
+  const students = S.data.map(d => {
+    const times = [...d.learn.attempt_log.map(a => a.time_ms), ...d.solo.answers.map(a => a.time_ms)];
+    const flagged = [...d.learn.attempt_log, ...d.solo.answers].find(a => a.flag_fast_guess);
+    const fastCount = d.learn.attempt_log.filter(a => a.flag_fast_guess).length + d.solo.flag_fast_guess_count;
+    return {
+      name: d.name, role: d.role,
+      learn: { ...d.learn },
+      teach: { ...d.teach },
+      solo: { ...d.solo },
+      summary: {
+        fastest_answer_ms: times.length ? Math.min(...times) : null,
+        fast_guess_count: fastCount,
+        flag_fast_guess: fastCount > 0,
+        flagged_question: flagged ? flagged.question : null
+      }
+    };
+  });
+  const payload = {
+    schema: 'sikho-sikhao/telemetry@1',
+    pod_code: POD_CODE, pod_id: podId(), phone_id: 'Phone ' + PHONE, lesson_id: LESSON_ID, lesson_title: LESSON.title, device: 'android-phone-' + PHONE,
+    generated_at: new Date().toISOString(),
+    teach_lock_seconds: TEACH_SECONDS,
+    team_bonus: students.every(s => s.solo.score >= 3),
+    students
+  };
+  payload.size_kb = +(JSON.stringify(payload).length / 1024).toFixed(1);
+  window.__lastSync = payload;
+  console.log('%c📡 SIKHO-SIKHAO SYNC PAYLOAD → Teacher Dashboard', 'background:#4f46e5;color:#fff;padding:4px 10px;border-radius:6px;font-weight:bold');
+  console.log(JSON.stringify(payload, null, 2));
+  return payload;
+}
+
+/* ================================================================
+   FX
+   ================================================================ */
+function burst(n) {
+  const fx = $('#fx'), colors = ['#fb923c', '#10b981', '#38bdf8', '#facc15', '#f43f5e', '#a78bfa'];
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement('div'); c.className = 'confetti';
+    c.style.left = Math.random() * 100 + '%'; c.style.background = colors[i % colors.length];
+    c.style.animationDuration = (1.6 + Math.random() * 1.6) + 's'; c.style.animationDelay = Math.random() * .5 + 's';
+    fx.appendChild(c); setTimeout(() => c.remove(), 4200);
+  }
+}
+const _enter = enterSummit;
+enterSummit = function () { _enter(); if (S.data.every(d => d.solo.score >= 3)) { burst(90); setTimeout(() => burst(70), 1200); setTimeout(() => burst(60), 2600); } else burst(25); };
+
+/* teach screen entry point */
+const _go = go;
+go = function (screen, extra) { if (screen === 'teach_init') { clearInterval(S.t && S.t.iv); startTeach(); $('#screen').scrollTop = 0; return; } _go(screen, extra); };
+
+render();
+</script>
+</body>
+</html>

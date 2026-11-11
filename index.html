@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sikho-Sikhao · Offline-first learning for remote classrooms</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<style>
+  body { background: #070b14; font-family: ui-sans-serif, system-ui, sans-serif; }
+  iframe { border: 0; background: transparent; }
+  .pane { transition: opacity .3s ease, flex-basis .35s ease; }
+  .seg-active { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; box-shadow: 0 6px 20px rgba(99,102,241,.45); }
+  @keyframes up { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+  .up { animation: up .4s ease both; }
+</style>
+</head>
+<body class="h-screen flex flex-col text-slate-200 overflow-hidden">
+
+<main id="stage" class="flex-1 min-h-0 flex">
+  <div id="teacherPane" class="pane flex-1 min-w-0"><iframe id="teacher" src="teacher.html" title="Teacher Dashboard" class="w-full h-full"></iframe></div>
+  <div id="studentPane" class="pane hidden min-w-0 bg-gradient-to-b from-slate-900 to-slate-950"><iframe id="student" src="student.html" title="Student App" class="w-full h-full"></iframe></div>
+</main>
+
+<!-- Persona switcher -->
+<nav class="shrink-0 border-t border-slate-800 bg-slate-950/95 backdrop-blur px-3 py-2.5 flex items-center justify-center gap-2 sm:gap-3">
+  <span class="hidden md:flex items-center gap-2 text-xs text-slate-500 mr-3"><i class="fa-solid fa-mountain-sun text-indigo-400"></i>Sikho-Sikhao demo · simulated</span>
+  <div class="flex bg-slate-900 rounded-2xl p-1 gap-1 text-sm font-semibold">
+    <button data-m="teacher" class="seg px-4 py-2.5 rounded-xl transition text-slate-400"><i class="fa-solid fa-chalkboard-user mr-2"></i>Teacher</button>
+    <button data-m="student" class="seg px-4 py-2.5 rounded-xl transition text-slate-400"><i class="fa-solid fa-mobile-screen mr-2"></i>Student phone</button>
+    <button data-m="split" class="seg hidden md:block px-4 py-2.5 rounded-xl transition text-slate-400"><i class="fa-solid fa-table-columns mr-2"></i>Side by side</button>
+  </div>
+  <button id="reload" title="Restart student app" class="w-10 h-10 rounded-xl bg-slate-900 text-slate-400 hover:text-white transition"><i class="fa-solid fa-rotate-right"></i></button>
+</nav>
+
+<div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 -translate-y-24 opacity-0 transition-all duration-300 z-50 bg-emerald-500 text-white font-semibold text-sm px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2"><i class="fa-solid fa-satellite-dish"></i><span id="toastMsg"></span></div>
+
+<script>
+const tp = document.getElementById('teacherPane'), sp = document.getElementById('studentPane');
+const teacher = document.getElementById('teacher'), student = document.getElementById('student');
+
+function setMode(m) {
+  if (m === 'split' && innerWidth < 768) m = 'student';
+  tp.classList.toggle('hidden', m === 'student');
+  sp.classList.toggle('hidden', m === 'teacher');
+  sp.style.flex = m === 'split' ? '0 0 440px' : '1 1 auto';
+  tp.style.flex = '1 1 auto';
+  document.querySelectorAll('.seg').forEach(b => {
+    const on = b.dataset.m === m;
+    b.classList.toggle('seg-active', on); b.classList.toggle('text-slate-400', !on);
+  });
+  try { history.replaceState(null, '', '#' + m); } catch (e) {}
+}
+document.querySelectorAll('.seg').forEach(b => b.addEventListener('click', () => setMode(b.dataset.m)));
+document.getElementById('reload').addEventListener('click', () => { student.src = 'student.html'; });
+
+// Student phone -> "router" -> Teacher dashboard (all in this browser, no network)
+const lessonStore = {};   // the "router": lessons published by the teacher, served to the student phone
+window.addEventListener('message', e => {
+  const d = e.data; if (!d) return;
+  if (d.type === 'sikho-lesson-publish' && d.lesson) { lessonStore[d.lesson.code] = d.lesson; return; }
+  if (d.type === 'sikho-lesson-request') { e.source.postMessage({ type: 'sikho-lesson-reply', code: d.code, lesson: lessonStore[d.code] || null }, '*'); return; }
+  if (d.type !== 'sikho-sync') return;
+  teacher.contentWindow.postMessage(d, '*');
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = `${d.payload.phone_id || 'Phone'} · ${d.payload.pod_id || 'Pod'} (Lesson ${d.payload.pod_code}) uploaded ${d.payload.size_kb}kb to router. See Teacher → LAN Collect.`;
+  t.classList.remove('-translate-y-24', 'opacity-0'); setTimeout(() => t.classList.add('-translate-y-24', 'opacity-0'), 4200);
+});
+
+setMode(location.hash.replace('#', '') || 'teacher');
+</script>
+</body>
+</html>

@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sikho-Sikhao · Teacher Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+        colors: { ink: { 950: '#070b14', 900: '#0b1220', 800: '#0f172a', 700: '#1e293b' } }
+      }
+    }
+  };
+</script>
+<style>
+  body { background: radial-gradient(1200px 600px at 80% -10%, rgba(99,102,241,.18), transparent 60%), radial-gradient(900px 500px at 0% 100%, rgba(16,185,129,.10), transparent 60%), #070b14; }
+  .glass { background: rgba(15,23,42,.62); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(148,163,184,.14); }
+  .glass-strong { background: rgba(15,23,42,.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(129,140,248,.25); }
+  .fade-in { animation: fadeIn .5s ease both; }
+  .slide-up { animation: slideUp .45s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: translateY(0) } }
+  @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(244,63,94,.55) } 70% { box-shadow: 0 0 0 10px rgba(244,63,94,0) } 100% { box-shadow: 0 0 0 0 rgba(244,63,94,0) } }
+  @keyframes pulseAmber { 0% { box-shadow: 0 0 0 0 rgba(245,158,11,.5) } 70% { box-shadow: 0 0 0 9px rgba(245,158,11,0) } 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0) } }
+  .pulse-red { animation: pulseRing 1.8s infinite; }
+  .pulse-amber { animation: pulseAmber 2.2s infinite; }
+  @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
+  .blink { animation: blink 1.4s infinite; }
+  @keyframes shimmer { 0% { background-position: -200% 0 } 100% { background-position: 200% 0 } }
+  .shimmer { background: linear-gradient(90deg, rgba(99,102,241,.0), rgba(167,139,250,.35), rgba(99,102,241,.0)); background-size: 200% 100%; animation: shimmer 1.6s infinite; }
+  .modal-backdrop { transition: opacity .25s ease; }
+  .modal-panel { transition: transform .3s cubic-bezier(.2,.8,.2,1), opacity .25s ease; }
+  .modal-hidden .modal-backdrop { opacity: 0; }
+  .modal-hidden .modal-panel { opacity: 0; transform: translateY(18px) scale(.96); }
+  .row-hover:hover { background: rgba(99,102,241,.06); }
+  ::-webkit-scrollbar { width: 8px; height: 8px } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 8px }
+  .nav-active { background: linear-gradient(90deg, rgba(99,102,241,.25), rgba(99,102,241,.04)); border-left: 3px solid #818cf8; color: #fff; }
+  .card-lift { transition: transform .25s ease, border-color .25s ease; }
+  .card-lift:hover { transform: translateY(-3px); border-color: rgba(129,140,248,.45); }
+  .wire { height: 3px; width: 100%; background: repeating-linear-gradient(90deg,#6366f1 0 8px,transparent 8px 16px); background-size: 32px 3px; opacity: .3; }
+  .flow .wire { opacity: 1; animation: wire .5s linear infinite; }
+  @keyframes wire { to { background-position: 32px 0 } }
+</style>
+</head>
+<body class="font-sans text-slate-200 antialiased min-h-screen">
+
+<div class="flex min-h-screen">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="w-72 shrink-0 bg-ink-950/95 border-r border-slate-800 flex flex-col h-screen sticky top-0">
+    <div class="px-6 pt-6 pb-5">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 grid place-items-center shadow-lg shadow-indigo-900/50">
+          <i class="fa-solid fa-mountain-sun text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="font-extrabold text-white text-lg leading-tight tracking-tight">Sikho-Sikhao</h1>
+          <p class="text-[11px] text-slate-500 uppercase tracking-widest">Teacher Console</p>
+        </div>
+      </div>
+    </div>
+
+    <nav class="px-3 space-y-1" id="nav">
+      <button data-tab="telemetry" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+        <i class="fa-solid fa-chart-line w-5 text-center"></i> Live Pod Telemetry
+        <span id="navFlagBadge" class="ml-auto text-[10px] font-bold bg-rose-500/90 text-white rounded-full px-2 py-0.5">0</span>
+      </button>
+      <button data-tab="collect" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+        <i class="fa-solid fa-network-wired w-5 text-center"></i> LAN Collect
+        <span id="navCollectBadge" class="ml-auto text-[10px] font-bold bg-amber-500/90 text-white rounded-full px-2 py-0.5">0</span>
+      </button>
+      <button data-tab="studio" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+        <i class="fa-solid fa-wand-magic-sparkles w-5 text-center"></i> AI Lesson Studio
+        <span class="ml-auto text-[10px] font-semibold text-indigo-300 bg-indigo-500/15 rounded-full px-2 py-0.5">LLM</span>
+      </button>
+      <button data-tab="stories" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+        <i class="fa-solid fa-book-open-reader w-5 text-center"></i> Elder Stories Bank
+      </button>
+    </nav>
+
+    <!-- Local Router Feed -->
+    <div class="mt-6 px-4 flex-1 min-h-0 flex flex-col">
+      <div class="flex items-center justify-between mb-2 px-1">
+        <h3 class="text-[11px] uppercase tracking-widest text-slate-500 font-semibold">Local Router Feed</h3>
+        <span class="flex items-center gap-1.5 text-[10px] text-emerald-400 font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 blink"></span>LIVE</span>
+      </div>
+      <div id="routerFeed" class="flex-1 overflow-y-auto space-y-2 pr-1 pb-2"></div>
+    </div>
+
+    <!-- System status -->
+    <div class="m-4 mt-2 glass rounded-2xl p-4 space-y-2.5 text-xs">
+      <div class="flex items-center justify-between"><span class="text-slate-400"><i class="fa-solid fa-wifi mr-2 text-emerald-400"></i>Router (no internet)</span><span class="text-emerald-400 font-semibold">192.168.0.1</span></div>
+      <div class="flex items-center justify-between"><span class="text-slate-400"><i class="fa-solid fa-microchip mr-2 text-indigo-400"></i>Ollama · llama3</span><span class="text-indigo-300 font-semibold">Ready</span></div>
+      <div class="flex items-center justify-between"><span class="text-slate-400"><i class="fa-solid fa-mobile-screen mr-2 text-purple-400"></i>Pod phones</span><span id="phoneStatus" class="text-slate-200 font-semibold">4 / 4</span></div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="flex-1 min-w-0 p-8 overflow-x-hidden">
+    <!-- Top bar -->
+    <header class="flex items-center justify-between mb-8">
+      <div>
+        <h2 id="pageTitle" class="text-2xl font-extrabold text-white tracking-tight">Live Pod Telemetry</h2>
+        <p id="pageSub" class="text-sm text-slate-500 mt-1">Class 5 · Village school · Offline mode</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="dlBtn" class="px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 shadow-lg shadow-emerald-900/40 transition active:scale-95"><i class="fa-solid fa-download mr-2"></i>Download package from router <span id="dlBadge" class="ml-1.5 bg-white/25 rounded-full px-2 py-0.5">0</span></button>
+        <div class="glass rounded-xl px-4 py-2 text-xs text-slate-300 flex items-center gap-2"><i class="fa-regular fa-clock text-indigo-300"></i><span id="clock">--:--</span></div>
+        <div class="glass rounded-xl px-4 py-2 text-xs flex items-center gap-2"><i class="fa-solid fa-plane text-amber-300"></i><span class="text-slate-300">Airgapped</span></div>
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 grid place-items-center font-bold text-white shadow-lg">T</div>
+      </div>
+    </header>
+
+    <!-- ===== TAB: TELEMETRY ===== -->
+    <section id="tab-telemetry" class="tab fade-in">
+      <div class="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-8" id="statCards"></div>
+
+      <div class="flex items-center justify-between mb-4">
+        <div><h3 class="text-lg font-bold text-white">Lesson codes &amp; pods</h3><p class="text-xs text-slate-500">One code can be taught by many pods. Tap a pod to analyse it.</p></div>
+        <button id="simBtn" class="px-3 py-2 rounded-lg bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25 transition text-xs font-semibold"><i class="fa-solid fa-satellite-dish mr-1.5"></i>Simulate incoming sync</button>
+      </div>
+      <div id="groups"></div>
+      <p class="text-[11px] text-slate-600 mt-4"><i class="fa-solid fa-lock mr-1"></i>All telemetry stays on this laptop. Flags are computed on the phone and re-verified by the local model. Nothing leaves the village.</p>
+    </section>
+
+    <!-- ===== TAB: LAN COLLECT ===== -->
+    <section id="tab-collect" class="tab hidden">
+      <div id="topo" class="glass rounded-3xl p-6 mb-6 flex items-center gap-3 text-center">
+        <div class="w-44 shrink-0"><div class="w-14 h-14 mx-auto rounded-2xl bg-purple-500/15 text-purple-300 grid place-items-center text-2xl mb-2"><i class="fa-solid fa-mobile-screen"></i></div><div class="font-bold text-white text-sm">Pod phones</div><div id="topoPhones" class="text-[11px] text-slate-500"></div></div>
+        <div class="flex-1"><div class="wire rounded"></div><div class="text-[10px] text-slate-500 mt-2"><i class="fa-solid fa-wifi mr-1"></i>Wi-Fi · each phone pushes its JSON</div></div>
+        <div class="w-44 shrink-0"><div class="w-14 h-14 mx-auto rounded-2xl bg-amber-500/15 text-amber-300 grid place-items-center text-2xl mb-2"><i class="fa-solid fa-tower-broadcast"></i></div><div class="font-bold text-white text-sm">Router 192.168.0.1</div><div id="topoInbox" class="text-[11px] text-slate-500"></div></div>
+        <div class="flex-1"><div class="wire rounded"></div><div class="text-[10px] text-slate-500 mt-2"><i class="fa-solid fa-ethernet mr-1"></i>LAN cable · lab laptop pulls package</div></div>
+        <div class="w-44 shrink-0"><div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/15 text-emerald-300 grid place-items-center text-2xl mb-2"><i class="fa-solid fa-laptop"></i></div><div class="font-bold text-white text-sm">Lab laptop</div><div class="text-[11px] text-slate-500">Teacher console + local AI</div></div>
+      </div>
+      <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 glass rounded-3xl overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-800 font-bold text-white text-sm"><i class="fa-solid fa-inbox mr-2 text-amber-300"></i>Router inbox · one JSON file per phone</div>
+          <table class="w-full text-sm"><thead><tr class="text-[11px] uppercase tracking-widest text-slate-500 border-b border-slate-800"><th class="text-left px-5 py-3">File</th><th class="text-left px-3 py-3">Phone</th><th class="text-left px-3 py-3">Pod · Lesson code</th><th class="text-left px-3 py-3">Size</th><th class="text-left px-3 py-3">Status</th></tr></thead><tbody id="inboxBody"></tbody></table>
+        </div>
+        <div class="space-y-4">
+          <div class="glass-strong rounded-3xl p-5">
+            <button id="dlBtn2" class="w-full py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 shadow-lg shadow-emerald-900/40 transition active:scale-[.98]"><i class="fa-solid fa-download mr-2"></i>Download package from router</button>
+            <ul id="dlSteps" class="mt-4 space-y-2 text-xs"></ul>
+            <button id="openAnalysis" class="hidden mt-4 w-full py-2.5 rounded-xl text-sm font-bold text-indigo-200 bg-indigo-500/15 hover:bg-indigo-500/25 transition">Open pod analysis <i class="fa-solid fa-arrow-right ml-1"></i></button>
+          </div>
+          <div class="glass rounded-3xl p-5 space-y-3 text-xs text-slate-400">
+            <label class="flex items-center gap-2 cursor-pointer"><input id="autoCol" type="checkbox" checked class="accent-indigo-500" /> Auto-download new uploads (turn off to collect manually)</label>
+            <label class="block px-4 py-3 rounded-xl border border-dashed border-slate-700 hover:border-indigo-400 cursor-pointer text-center transition"><i class="fa-solid fa-file-arrow-up mr-2 text-indigo-300"></i>Import phone JSON from USB / file<input id="importFile" type="file" accept=".json" multiple class="hidden" /></label>
+            <p class="text-[11px] text-slate-600">Real build: phones POST to the router on the village LAN. At the lab, the laptop plugs into the same router and pulls everything in one package.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TAB: STUDIO ===== -->
+    <section id="tab-studio" class="tab hidden">
+      <div class="grid lg:grid-cols-5 gap-6">
+        <div class="lg:col-span-2 glass rounded-3xl p-6 h-fit">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-300 grid place-items-center"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+            <div><h3 class="font-bold text-white">Create tomorrow's lesson</h3><p class="text-xs text-slate-500">Runs on the local SLM. No internet needed.</p></div>
+          </div>
+          <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Topic</label>
+          <input id="topicInput" value="Fractions" class="mt-2 mb-4 w-full bg-ink-900 border border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30 outline-none rounded-xl px-4 py-3 text-sm text-white transition" placeholder="e.g. Fractions, Water cycle, Area" />
+          <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Local Context</label>
+          <textarea id="contextInput" rows="4" class="mt-2 mb-3 w-full bg-ink-900 border border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30 outline-none rounded-xl px-4 py-3 text-sm text-white transition resize-none" placeholder="e.g. Uncle Tenzing's bamboo weaving">Uncle Tenzing's bamboo weaving</textarea>
+          <div class="flex flex-wrap gap-2 mb-6">
+            <button class="chip text-[11px] px-3 py-1.5 rounded-full bg-slate-800 hover:bg-indigo-500/20 hover:text-indigo-200 transition" data-ctx="Uncle Tenzing's bamboo weaving">🎋 Bamboo weaving</button>
+            <button class="chip text-[11px] px-3 py-1.5 rounded-full bg-slate-800 hover:bg-indigo-500/20 hover:text-indigo-200 transition" data-ctx="Sharing rice at the harvest festival">🌾 Harvest festival</button>
+            <button class="chip text-[11px] px-3 py-1.5 rounded-full bg-slate-800 hover:bg-indigo-500/20 hover:text-indigo-200 transition" data-ctx="Counting hornbill feathers on the forest trail">🦜 Forest trail</button>
+          </div>
+          <button id="genBtn" class="w-full py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 shadow-lg shadow-indigo-900/40 transition active:scale-[.98]">
+            <i class="fa-solid fa-bolt mr-2"></i>Generate Lesson
+          </button>
+          <div class="mt-4 text-[11px] text-slate-500 flex items-center gap-2"><i class="fa-solid fa-circle-info"></i>Model: llama3 (local via Ollama) · est. 40 s on this laptop</div>
+        </div>
+
+        <div class="lg:col-span-3 space-y-5">
+          <div id="studioEmpty" class="glass rounded-3xl p-10 text-center">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-indigo-500/10 text-indigo-300 grid place-items-center text-2xl mb-4"><i class="fa-solid fa-puzzle-piece"></i></div>
+            <h4 class="font-bold text-white mb-1">Your 4-part jigsaw lesson will appear here</h4>
+            <p class="text-sm text-slate-500 max-w-sm mx-auto">Each of the four pod members masters one part, teaches it to the others, then takes a Solo Check.</p>
+          </div>
+          <div id="studioProgress" class="hidden glass rounded-3xl p-8">
+            <div class="flex items-center gap-3 mb-5"><i class="fa-solid fa-microchip text-indigo-300 blink"></i><h4 class="font-bold text-white">Local model is working…</h4></div>
+            <div class="h-2 rounded-full bg-slate-800 overflow-hidden"><div id="progBar" class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500" style="width:0%"></div></div>
+            <ul id="progSteps" class="mt-5 space-y-2 text-sm"></ul>
+          </div>
+          <div id="studioResult" class="hidden space-y-5"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TAB: STORIES ===== -->
+    <section id="tab-stories" class="tab hidden">
+      <div class="flex items-center justify-between mb-5">
+        <p class="text-sm text-slate-400 max-w-xl">Stories and skills recorded from village elders. Use any of them as the "Local Context" for a lesson.</p>
+        <button id="addStoryBtn" class="px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 transition"><i class="fa-solid fa-microphone mr-2"></i>Record new story</button>
+      </div>
+      <div id="storyGrid" class="grid md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
+    </section>
+  </main>
+</div>
+
+<!-- ============ INSIGHT MODAL ============ -->
+<div id="modal" class="fixed inset-0 z-50 hidden modal-hidden">
+  <div id="modalBackdrop" class="modal-backdrop absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div class="absolute inset-0 grid place-items-center p-4 pointer-events-none">
+    <div class="modal-panel glass-strong rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto pointer-events-auto shadow-2xl shadow-indigo-950/60" id="modalPanel"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-6 right-6 z-[60] translate-y-24 opacity-0 transition-all duration-300 glass-strong rounded-2xl px-5 py-3.5 text-sm text-white flex items-center gap-3 shadow-xl">
+  <i class="fa-solid fa-circle-check text-emerald-400"></i><span id="toastMsg"></span>
+</div>
+
+<script>
+/* =========================================================
+   MOCK DATA  (everything below is local, no network calls)
+   ========================================================= */
+const AVATAR_GRADS = {
+  Hornbill: 'from-amber-400 to-orange-600', Elephant: 'from-slate-400 to-slate-600', Panda: 'from-zinc-300 to-zinc-600', Tiger: 'from-orange-400 to-red-600',
+  'Red Panda': 'from-red-400 to-rose-600', Leopard: 'from-yellow-400 to-amber-700', Mithun: 'from-stone-400 to-stone-700', Takin: 'from-yellow-500 to-orange-700',
+  Gibbon: 'from-neutral-400 to-neutral-700', Rhino: 'from-slate-500 to-gray-700', Loris: 'from-lime-400 to-emerald-600', Langur: 'from-yellow-300 to-orange-500',
+  Pangolin: 'from-teal-400 to-cyan-700', Otter: 'from-sky-400 to-blue-600', Python: 'from-green-400 to-emerald-700', Eagle: 'from-indigo-400 to-purple-700'
+};
+const EMOJI = { Hornbill:'🦜', Elephant:'🐘', Panda:'🐼', Tiger:'🐯', 'Red Panda':'🦊', Leopard:'🐆', Mithun:'🐂', Takin:'🐐', Gibbon:'🐒', Rhino:'🦏', Loris:'🦥', Langur:'🐵', Pangolin:'🦔', Otter:'🦦', Python:'🐍', Eagle:'🦅' };
+
+const QUESTIONS = {
+  q1: 'If a bamboo strip is cut into 4 equal pieces and you take 3, what fraction do you have?',
+  q2: 'Which is bigger: 1/2 or 1/4 of the same rice cake?',
+  q3: 'Write 2/4 in its simplest form.',
+  q4: 'Uncle weaves 3/8 of a mat in the morning and 2/8 in the evening. How much is woven?'
+};
+
+/* flag types: guessing | struggle | hints | stuck | ok */
+const st = (name, role, attempts, hints, score, flag = null) => ({ name, role, attempts, hints, score, flag });
+const waiting = a => a.map(([n, r]) => st(n, r, 0, 0, null));
+const LT = 'Fractions · Bamboo weaving';
+/* one lesson CODE can be taught by many PODS (one phone each) */
+const pods = [
+  { code: '4092', id: 'Pod A', phone: 'Phone 1', lesson: LT, synced: '2 min ago', kb: 2.1, students: [
+    st('Hornbill', 'Leader', 2, 0, 92), st('Elephant', 'Explainer', 3, 1, 78, { type: 'struggle', q: QUESTIONS.q3, time: 41.2, attempts: 3 }),
+    st('Panda', 'Checker', 1, 0, 34, { type: 'guessing', q: QUESTIONS.q1, time: 0.8, min: 3.5, streak: 4 }), st('Tiger', 'Reporter', 2, 2, 85) ] },
+  { code: '4092', id: 'Pod B', phone: 'Phone 2', lesson: LT, synced: '31 min ago', kb: 1.9, students: [
+    st('Pangolin', 'Checker', 2, 1, 87), st('Otter', 'Reporter', 2, 0, 93),
+    st('Python', 'Leader', 3, 2, 69, { type: 'struggle', q: QUESTIONS.q4, time: 38.6, attempts: 3 }), st('Eagle', 'Explainer', 1, 0, 97) ] },
+  { code: '4092', id: 'Pod C', phone: 'Phone 3', lesson: LT, synced: 'waiting', kb: 0, students: waiting([['Gibbon', 'Explainer'], ['Rhino', 'Reporter'], ['Loris', 'Leader'], ['Langur', 'Checker']]) },
+  { code: '4092', id: 'Pod D', phone: 'Phone 4', lesson: LT, synced: 'waiting', kb: 0, students: waiting([['Red Panda', 'Reporter'], ['Leopard', 'Leader'], ['Mithun', 'Checker'], ['Takin', 'Explainer']]) },
+  { code: '5518', id: 'Pod A', phone: 'Phone 5', lesson: 'Water cycle · Reading the river', synced: '1 hr ago', kb: 2.0, students: [
+    st('Eagle', 'Leader', 1, 0, 88), st('Otter', 'Explainer', 2, 1, 76), st('Hornbill', 'Checker', 2, 0, 91),
+    st('Tiger', 'Reporter', 3, 2, 62, { type: 'struggle', q: QUESTIONS.q2, time: 35.0, attempts: 3 }) ] }
+];
+
+/* ---- Router inbox: JSON files uploaded by phones, waiting for the lab laptop ---- */
+function mk(code, title, pod, phone, rows) {
+  const students = rows.map(([n, r, a, h, sc, g]) => ({ name: n, role: r,
+    learn: { attempts: a, hints_used: h, attempt_log: [{ question: QUESTIONS.q3, time_ms: 12000 + a * 4000 }] }, solo: { score: sc, total: 4 },
+    summary: { fastest_answer_ms: g ? 700 : 5200, fast_guess_count: g ? 4 : 0, flag_fast_guess: !!g, flagged_question: g ? QUESTIONS.q1 : null } }));
+  const p = { schema: 'sikho-sikhao/telemetry@1', pod_code: code, pod_id: pod, phone_id: phone, lesson_title: title, generated_at: new Date().toISOString(), students };
+  p.size_kb = +(JSON.stringify(p).length / 1024).toFixed(1); return p;
+}
+let autoCollect = true, backPod = null, dlBusy = false;
+const inboxItem = (p, at, done) => ({ file: p.pod_code + '-' + p.pod_id.replace(' ', '') + '.json', code: p.pod_code, pod: p.pod_id, phone: p.phone_id, kb: p.size_kb, at, done, payload: p });
+const inbox = [
+  { file: '4092-PodA.json', code: '4092', pod: 'Pod A', phone: 'Phone 1', kb: 2.1, at: '2 min ago', done: true },
+  { file: '4092-PodB.json', code: '4092', pod: 'Pod B', phone: 'Phone 2', kb: 1.9, at: '31 min ago', done: true },
+  { file: '5518-PodA.json', code: '5518', pod: 'Pod A', phone: 'Phone 5', kb: 2.0, at: '1 hr ago', done: true },
+  inboxItem(mk('4092', LT, 'Pod C', 'Phone 3', [['Gibbon', 'Explainer', 2, 1, 3, 0], ['Rhino', 'Reporter', 1, 0, 1, 1], ['Loris', 'Leader', 3, 1, 4, 0], ['Langur', 'Checker', 2, 0, 3, 0]]), '6 min ago', false),
+  inboxItem(mk('4092', LT, 'Pod D', 'Phone 4', [['Red Panda', 'Reporter', 4, 4, 2, 0], ['Leopard', 'Leader', 1, 0, 4, 0], ['Mithun', 'Checker', 2, 1, 4, 0], ['Takin', 'Explainer', 2, 0, 3, 0]]), '11 min ago', false)
+];
+const codes = () => [...new Set(pods.map(p => p.code))];
+const podsOf = c => pods.map((p, i) => ({ p, i })).filter(x => x.p.code === c);
+const isSynced = p => p.synced !== 'waiting';
+const avg = a => { const v = a.filter(s => s.score != null); return v.length ? Math.round(v.reduce((x, s) => x + s.score, 0) / v.length) : null; };
+
+const stories = [
+  { title: 'Uncle Tenzing and the Bamboo Mat', elder: 'Tenzing Dorjee, 71', tag: 'Weaving', icon: 'fa-mattress-pillow', color: 'emerald', len: '4:12', text: 'How one bamboo stalk is split into equal strips, and why every strip must match for the mat to lie flat.', ctx: "Uncle Tenzing's bamboo weaving" },
+  { title: 'The Hornbill Feather Count', elder: 'Ibem Pao, 68', tag: 'Forest', icon: 'fa-feather-pointed', color: 'indigo', len: '3:05', text: 'Counting the feathers in the festival headdress, and how the elders share them between clans.', ctx: 'Counting hornbill feathers on the forest trail' },
+  { title: 'Sharing Rice at Harvest', elder: 'Meena Rai, 74', tag: 'Festival', icon: 'fa-wheat-awn', color: 'amber', len: '5:20', text: 'The fair-share rule: every household receives an equal part, and the leftover goes to the guest house.', ctx: 'Sharing rice at the harvest festival' },
+  { title: 'Reading the River', elder: 'Anok Lepcha, 80', tag: 'Water', icon: 'fa-water', color: 'sky', len: '6:01', text: 'How the elders judge flood risk from the colour and speed of the river, and a way to measure with sticks.', ctx: 'Measuring river depth with bamboo sticks' },
+  { title: 'The Weaver\'s Pattern Song', elder: 'Dolma Sherpa, 66', tag: 'Patterns', icon: 'fa-music', color: 'purple', len: '2:48', text: 'A repeating song that mirrors the repeating pattern on a traditional shawl.', ctx: 'The repeating pattern on a village shawl' },
+  { title: 'Three Hills, One Path', elder: 'Rinchen Bhutia, 72', tag: 'Distance', icon: 'fa-mountain', color: 'rose', len: '4:40', text: 'Walking to the market: how long each hill takes, and how elders plan the day around it.', ctx: 'Planning the walk to the weekly market' }
+];
+
+const feedMsgs = [
+  p => `${p} synced <b class="text-slate-200">2.1kb</b>`,
+  p => `${p} pulled lesson JSON <b class="text-slate-200">14kb</b>`,
+  p => `Handshake OK · ${p}`,
+  p => `${p} synced <b class="text-slate-200">1.7kb</b>`,
+  p => `${p} telemetry verified by local AI`
+];
+
+const INSIGHTS = {
+  guessing: {
+    label: 'Guessing', icon: '🚨', btn: 'bg-rose-500/15 text-rose-300 border-rose-500/40 hover:bg-rose-500/25 pulse-red',
+    headline: 'Rapid-fire answering. Likely rote guessing.',
+    what: 'The student answered faster than it is physically possible to read and think about the question.',
+    why: [
+      'Fast taps with no pause often mean the student is racing to finish, or has learned that tapping is "safe".',
+      'A short streak of quick answers with a low Solo Score points to guessing, not mastery.',
+      'It is rarely laziness. It often covers a fear of being seen as slow in front of the pod.'
+    ],
+    actions: [
+      'Sit with the student and ask them to explain the concept <b>out loud using physical flashcards</b> or bamboo strips.',
+      'Praise a slow, wrong answer in front of the pod to make careful thinking feel safe.',
+      'Ask the pod Checker to hold a "think-for-5" rule before the next Solo Check.',
+      'Re-run the part with a concrete object, then retest tomorrow.'
+    ]
+  },
+  struggle: {
+    label: 'Productive Struggle', icon: '🧗', btn: 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25 pulse-amber',
+    headline: 'Long effort, multiple tries, improving. This is a good sign.',
+    what: 'The student spent a long time on the question and changed their answer several times before getting close.',
+    why: [
+      'Time spent plus a changing answer pattern shows real reasoning, not guessing.',
+      'This is the zone where durable learning happens, provided frustration stays manageable.',
+      'Touch patterns show careful, deliberate selection rather than random tapping.'
+    ],
+    actions: [
+      '<b>Do not rescue</b> them yet. Let them struggle a little longer.',
+      'Ask one guiding question: "What did you try first?" instead of giving the answer.',
+      'Have them teach what they do understand to the pod. Explaining consolidates it.',
+      'Watch for signs of frustration. If they sigh or give up, offer a concrete example.'
+    ]
+  },
+  hints: {
+    label: 'Hint Dependence', icon: '💡', btn: 'bg-indigo-500/15 text-indigo-200 border-indigo-400/40 hover:bg-indigo-500/25 pulse-amber',
+    headline: 'Relying on hints before attempting.',
+    what: 'The student opened hints early on most questions, sometimes before making any attempt.',
+    why: [
+      'This can mean low confidence, or a gap in the prerequisite idea that the hints are patching over.',
+      'Hint use with a mid Solo Score suggests partial understanding that is not yet independent.'
+    ],
+    actions: [
+      'Agree on a "try first, then hint" rule with the student.',
+      'Check the prerequisite skill with a quick 2-minute oral question.',
+      'Pair them with the Explainer for a short peer re-teach.',
+      'Celebrate the first question they solve without a hint.'
+    ]
+  },
+  stuck: {
+    label: 'Stuck / Disengaged', icon: '🧊', btn: 'bg-sky-500/15 text-sky-300 border-sky-500/40 hover:bg-sky-500/25 pulse-amber',
+    headline: 'Very long pause with little activity.',
+    what: 'The screen showed almost no touch activity for a long period on a single question.',
+    why: [
+      'Could be confusion, fear of getting it wrong, a hardware issue, or another child dominating the phone.',
+      'Check the pod dynamic first: is the shared phone being held by someone else?'
+    ],
+    actions: [
+      'Walk over and ask a gentle check-in question, not a test question.',
+      'Make sure every pod member gets hands-on time with the phone.',
+      'Break the problem into a smaller first step with a physical object.'
+    ]
+  }
+};
+
+/* =========================================================
+   STATE & HELPERS
+   ========================================================= */
+let insightsGenerated = 0;
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const resolved = new Set();
+
+function flagKey(pi, si) { return pi + '-' + si; }
+function openFlagCount() {
+  let n = 0;
+  pods.forEach((p, pi) => p.students.forEach((s, si) => { if (s.flag && !resolved.has(flagKey(pi, si))) n++; }));
+  return n;
+}
+function totalFlags() { return pods.reduce((a, p) => a + p.students.filter(s => s.flag).length, 0); }
+function toast(msg) {
+  $('#toastMsg').textContent = msg;
+  const t = $('#toast');
+  t.classList.remove('translate-y-24', 'opacity-0');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.add('translate-y-24', 'opacity-0'), 2600);
+}
+function nowTime() { return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }); }
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+const TITLES = {
+  telemetry: ['Live Pod Telemetry', 'Class 5 · Village school · Offline mode'],
+  studio: ['AI Lesson Studio', "Generate tomorrow's jigsaw lesson with the local model"],
+  collect: ['LAN Collect', 'Pull pod JSON from the router, then analyse each pod'],
+  stories: ['Elder Stories Bank', 'Voices of the village, ready to teach with']
+};
+function setTab(tab) {
+  $$('.tab').forEach(t => t.classList.add('hidden'));
+  const el = $('#tab-' + tab);
+  el.classList.remove('hidden');
+  el.classList.remove('fade-in'); void el.offsetWidth; el.classList.add('fade-in');
+  $$('.nav-btn').forEach(b => {
+    const active = b.dataset.tab === tab;
+    b.classList.toggle('nav-active', active);
+    b.classList.toggle('text-slate-400', !active);
+  });
+  $('#pageTitle').textContent = TITLES[tab][0];
+  $('#pageSub').textContent = TITLES[tab][1];
+}
+$$('.nav-btn').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+
+/* =========================================================
+   STATS CARDS
+   ========================================================= */
+function renderStats() {
+  const students = pods.reduce((a, p) => a + p.students.length, 0);
+  const summits = pods.reduce((a, p) => a + p.students.filter(s => s.score >= 80).length, 0);
+  const cards = [
+    { label: 'Pods Collected', value: pods.filter(isSynced).length, sub: pods.filter(p => !isSynced(p)).length + ' waiting on router', icon: 'fa-mobile-screen-button', c: 'indigo' },
+    { label: 'Students', value: students, sub: codes().length + ' lesson codes · ' + pods.length + ' pods', icon: 'fa-children', c: 'purple' },
+    { label: 'Summits Reached', value: summits, sub: 'Solo Score ≥ 80%', icon: 'fa-flag-checkered', c: 'emerald' },
+    { label: 'AI Insights Generated', value: insightsGenerated + totalFlags(), sub: openFlagCount() + ' need your attention', icon: 'fa-brain', c: 'indigo' }
+  ];
+  const cmap = { indigo: 'text-indigo-300 bg-indigo-500/15', purple: 'text-purple-300 bg-purple-500/15', emerald: 'text-emerald-300 bg-emerald-500/15' };
+  $('#statCards').innerHTML = cards.map((c, i) => `
+    <div class="glass rounded-3xl p-5 card-lift slide-up" style="animation-delay:${i * 70}ms">
+      <div class="flex items-center justify-between mb-4">
+        <span class="text-xs uppercase tracking-widest text-slate-500 font-semibold">${c.label}</span>
+        <div class="w-9 h-9 rounded-xl grid place-items-center ${cmap[c.c]}"><i class="fa-solid ${c.icon}"></i></div>
+      </div>
+      <div class="text-4xl font-extrabold text-white tracking-tight" data-count="${c.value}">0</div>
+      <div class="text-xs text-slate-500 mt-1.5">${c.sub}</div>
+    </div>`).join('');
+  $$('#statCards [data-count]').forEach(el => {
+    const target = +el.dataset.count; let cur = 0;
+    const step = Math.max(1, Math.ceil(target / 20));
+    const iv = setInterval(() => { cur = Math.min(target, cur + step); el.textContent = cur; if (cur >= target) clearInterval(iv); }, 30);
+  });
+  const open = openFlagCount();
+  const nb = $('#navFlagBadge');
+  nb.textContent = open; nb.classList.toggle('hidden', open === 0);
+  const live = pods.filter(isSynced).length; $('#phoneStatus').textContent = live + ' / ' + pods.length;
+}
+
+/* =========================================================
+   POD TABLE
+   ========================================================= */
+function scoreBar(score) {
+  if (score == null) return '<span class="text-slate-600">—</span>';
+  const color = score >= 80 ? 'from-emerald-400 to-teal-400' : score >= 55 ? 'from-amber-400 to-yellow-400' : 'from-rose-500 to-orange-400';
+  const txt = score >= 80 ? 'text-emerald-300' : score >= 55 ? 'text-amber-300' : 'text-rose-300';
+  return `<div class="flex items-center gap-3">
+    <div class="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r ${color}" style="width:${score}%"></div></div>
+    <span class="text-xs font-bold ${txt} w-9 text-right">${score}%</span></div>`;
+}
+const ROLE_STYLE = {
+  Reporter: 'bg-sky-500/15 text-sky-300', Checker: 'bg-purple-500/15 text-purple-300',
+  Explainer: 'bg-indigo-500/15 text-indigo-300', Leader: 'bg-emerald-500/15 text-emerald-300'
+};
+const ROLE_ICON = { Reporter: 'fa-microphone-lines', Checker: 'fa-check-double', Explainer: 'fa-chalkboard-user', Leader: 'fa-crown' };
+
+function flagCell(s, pi, si) {
+  if (!s.flag) return `<span class="inline-flex items-center gap-1.5 text-xs text-emerald-400/90"><i class="fa-solid fa-circle-check"></i>On track</span>`;
+  if (resolved.has(flagKey(pi, si))) return `<span class="inline-flex items-center gap-1.5 text-xs text-emerald-300 bg-emerald-500/10 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-check"></i>Addressed</span>`;
+  const m = INSIGHTS[s.flag.type];
+  return `<button data-pi="${pi}" data-si="${si}" class="insight-btn inline-flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl border transition ${m.btn}">
+    <span>${m.icon}</span> AI Insight: ${m.label}</button>`;
+}
+
+function podCard(p, i) {
+  const ok = isSynced(p), fl = p.students.filter((s, si) => s.flag && !resolved.has(flagKey(i, si))).length;
+  return `<button data-pi="${i}" class="pod-btn text-left rounded-2xl p-4 border transition card-lift ${ok ? 'bg-ink-900/70 border-slate-700/70' : 'bg-ink-900/30 border-dashed border-slate-700'}">
+    <div class="flex items-center justify-between mb-3"><span class="font-extrabold text-white">${p.id}</span><span class="text-[10px] font-bold px-2 py-1 rounded-full ${ok ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}">${ok ? 'Collected' : 'On router'}</span></div>
+    <div class="flex -space-x-2 mb-3">${p.students.map(s => `<span class="w-8 h-8 rounded-full bg-gradient-to-br ${AVATAR_GRADS[s.name]} grid place-items-center text-sm ring-2 ring-slate-900">${EMOJI[s.name]}</span>`).join('')}</div>
+    ${ok ? scoreBar(avg(p.students)) : '<div class="text-xs text-amber-300/80">Not downloaded yet</div>'}
+    <div class="flex items-center justify-between text-[11px] text-slate-500 mt-3"><span><i class="fa-solid fa-mobile-screen mr-1"></i>${p.phone} · ${ok ? p.synced : 'waiting'}</span>${fl ? `<span class="text-rose-300 font-bold">${fl} flag${fl > 1 ? 's' : ''}</span>` : ''}</div>
+    <div class="mt-3 text-xs font-bold ${ok ? 'text-indigo-300' : 'text-slate-500'}">${ok ? 'Analyse pod →' : 'Download from router →'}</div></button>`;
+}
+function renderTable() {
+  $('#groups').innerHTML = codes().map((c, gi) => {
+    const ps = podsOf(c), all = ps.flatMap(x => x.p.students), done = ps.filter(x => isSynced(x.p)).length, a = avg(all);
+    return `<div class="glass rounded-3xl p-5 mb-6 slide-up" style="animation-delay:${gi * 80}ms">
+      <div class="flex items-center gap-4 flex-wrap mb-4">
+        <div class="flex gap-1">${c.split('').map(d => `<span class="w-9 h-11 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-xl font-extrabold grid place-items-center">${d}</span>`).join('')}</div>
+        <div><div class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Lesson code</div><div class="font-bold text-white">${ps[0].p.lesson}</div></div>
+        <div class="text-xs text-slate-400"><b class="text-white">${done}/${ps.length}</b> pods collected · <b class="text-white">${all.length}</b> students${a != null ? ` · avg <b class="text-white">${a}%</b>` : ''}</div>
+        <button data-c="${c}" class="lesson-btn ml-auto px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-500/15 text-indigo-200 hover:bg-indigo-500/25 transition"><i class="fa-solid fa-users-viewfinder mr-2"></i>All participants report</button>
+      </div>
+      <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-4">${ps.map(x => podCard(x.p, x.i)).join('')}</div></div>`;
+  }).join('');
+  $$('.pod-btn').forEach(b => b.addEventListener('click', () => { const i = +b.dataset.pi; if (isSynced(pods[i])) openPod(i); else { setTab('collect'); toast(pods[i].id + ' is still on the router. Download the package.'); } }));
+  $$('.lesson-btn').forEach(b => b.addEventListener('click', () => openLesson(b.dataset.c)));
+}
+const statBox = (v, l, c) => `<div class="rounded-2xl bg-ink-900/80 border border-slate-700/60 p-4"><div class="text-2xl font-extrabold ${c}">${v}</div><div class="text-[11px] text-slate-500 mt-1">${l}</div></div>`;
+function openPod(pi) {
+  const p = pods[pi]; backPod = pi;
+  const sc = p.students.filter(s => s.score != null), summ = sc.filter(s => s.score >= 80).length, hints = sc.reduce((a, s) => a + s.hints, 0);
+  const fl = p.students.filter((s, si) => s.flag && !resolved.has(flagKey(pi, si))).length, a = avg(p.students);
+  $('#modalPanel').innerHTML = `<div class="p-6 sm:p-8">
+    <div class="flex items-start gap-4 mb-5">
+      <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 grid place-items-center text-xl shrink-0"><i class="fa-solid fa-mobile-screen"></i></div>
+      <div class="flex-1"><div class="text-[11px] font-bold uppercase tracking-widest text-indigo-300">Pod analysis · Lesson code ${p.code}</div><h3 class="text-xl font-extrabold text-white">${p.id} · ${p.lesson}</h3>
+      <p class="text-xs text-slate-500 mt-1">${p.phone} · collected from router ${p.synced} · ${p.kb}kb JSON</p></div>
+      <button id="closeModal" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition grid place-items-center"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">${statBox(a == null ? '—' : a + '%', 'Pod average', 'text-white')}${statBox(summ + '/' + p.students.length, 'Reached summit', 'text-emerald-300')}${statBox(hints, 'Hints used', 'text-indigo-300')}${statBox(fl, 'Flags to review', fl ? 'text-rose-300' : 'text-slate-300')}</div>
+    <div class="rounded-2xl bg-indigo-500/10 border border-indigo-400/20 p-4 mb-4 text-sm text-slate-200"><i class="fa-solid fa-brain text-indigo-300 mr-2"></i>${summ} of ${p.students.length} students reached the summit.${fl ? ` ${fl} student${fl > 1 ? 's need' : ' needs'} your attention. Tap a flag below.` : ' No open flags. This pod is on track.'}</div>
+    ${p.students.map((s, si) => `<div class="flex items-center gap-3 py-3 border-t border-slate-800/70 flex-wrap">
+      <div class="w-10 h-10 rounded-full bg-gradient-to-br ${AVATAR_GRADS[s.name]} grid place-items-center text-lg">${EMOJI[s.name]}</div>
+      <div class="w-28"><div class="font-semibold text-white text-sm">${s.name}</div><span class="text-[10px] font-semibold px-2 py-0.5 rounded ${ROLE_STYLE[s.role]}">${s.role}</span></div>
+      <div class="text-[11px] text-slate-500 w-24">${s.attempts} tries · ${s.hints} hints</div>
+      <div class="flex-1 min-w-[120px]">${scoreBar(s.score)}</div><div>${flagCell(s, pi, si)}</div></div>`).join('')}
+  </div>`;
+  showModal(); $('#closeModal').onclick = hideModal;
+  $$('#modalPanel .insight-btn').forEach(b => b.addEventListener('click', () => openInsight(+b.dataset.pi, +b.dataset.si)));
+}
+function openLesson(c) {
+  backPod = null;
+  const ps = podsOf(c), live = ps.filter(x => isSynced(x.p)), all = live.flatMap(x => x.p.students.map(s => ({ s, p: x.p })));
+  const summ = all.filter(x => x.s.score >= 80).length, a = avg(all.map(x => x.s));
+  const fl = live.reduce((n, x) => n + x.p.students.filter((s, si) => s.flag && !resolved.has(flagKey(x.i, si))).length, 0);
+  $('#modalPanel').innerHTML = `<div class="p-6 sm:p-8">
+    <div class="flex items-start gap-4 mb-5"><div class="flex-1"><div class="text-[11px] font-bold uppercase tracking-widest text-indigo-300">All participants · Lesson code ${c}</div><h3 class="text-xl font-extrabold text-white">${ps[0].p.lesson}</h3>
+    <p class="text-xs text-slate-500 mt-1">${live.length} of ${ps.length} pods collected${live.length < ps.length ? ' · ' + (ps.length - live.length) + ' still on the router' : ''}</p></div>
+    <button id="closeModal" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition grid place-items-center"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">${statBox(all.length, 'Participants', 'text-white')}${statBox(a == null ? '—' : a + '%', 'Average, all pods', 'text-white')}${statBox(all.length ? Math.round(summ / all.length * 100) + '%' : '—', 'Reached summit', 'text-emerald-300')}${statBox(fl, 'Open flags', fl ? 'text-rose-300' : 'text-slate-300')}</div>
+    <div class="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-2">Pod comparison</div>
+    ${ps.map(x => `<button data-pi="${x.i}" class="pod-row w-full flex items-center gap-3 py-2.5 border-t border-slate-800/70 text-left hover:bg-indigo-500/5 transition"><span class="w-16 font-bold text-white text-sm">${x.p.id}</span><span class="w-20 text-[11px] text-slate-500">${x.p.phone}</span><div class="flex-1">${isSynced(x.p) ? scoreBar(avg(x.p.students)) : '<span class="text-xs text-amber-300">Waiting on router</span>'}</div><i class="fa-solid fa-chevron-right text-slate-600 text-xs"></i></button>`).join('')}
+    <div class="text-xs uppercase tracking-widest text-slate-500 font-semibold mt-5 mb-2">Every student, ranked</div>
+    ${[...all].sort((x, y) => (y.s.score ?? -1) - (x.s.score ?? -1)).map((x, n) => `<div class="flex items-center gap-3 py-2 border-t border-slate-800/70"><span class="w-6 text-xs text-slate-600">${n + 1}</span><span class="w-8 h-8 rounded-full bg-gradient-to-br ${AVATAR_GRADS[x.s.name]} grid place-items-center text-sm">${EMOJI[x.s.name]}</span><span class="w-24 text-sm text-white font-semibold">${x.s.name}</span><span class="w-14 text-[11px] text-slate-500">${x.p.id}</span><div class="flex-1">${scoreBar(x.s.score)}</div></div>`).join('')}
+  </div>`;
+  showModal(); $('#closeModal').onclick = hideModal;
+  $$('#modalPanel .pod-row').forEach(b => b.addEventListener('click', () => { const i = +b.dataset.pi; if (isSynced(pods[i])) openPod(i); else { hideModal(); setTab('collect'); } }));
+}
+
+/* =========================================================
+   INSIGHT MODAL
+   ========================================================= */
+function telemetryViz(s) {
+  const f = s.flag;
+  if (f.type === 'guessing') {
+    const pct = Math.min(100, (f.time / f.min) * 100);
+    return `
+    <div class="rounded-2xl bg-ink-900/80 border border-slate-700/60 p-5">
+      <div class="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-4">What the phone recorded</div>
+      <div class="grid grid-cols-3 gap-4 mb-5">
+        <div><div class="text-3xl font-extrabold text-rose-300">${f.time}s</div><div class="text-xs text-slate-500 mt-1">Time to answer</div></div>
+        <div><div class="text-3xl font-extrabold text-slate-200">${f.min}s</div><div class="text-xs text-slate-500 mt-1">Minimum reading time</div></div>
+        <div><div class="text-3xl font-extrabold text-amber-300">${f.streak}</div><div class="text-xs text-slate-500 mt-1">Fast answers in a row</div></div>
+      </div>
+      <div class="text-xs text-slate-400 mb-1.5">Answered in <b class="text-rose-300">${f.time}s</b>, but the minimum reading time is <b class="text-slate-200">${f.min}s</b></div>
+      <div class="relative h-3 rounded-full bg-slate-800 overflow-hidden">
+        <div class="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-rose-500 to-orange-400" style="width:${pct}%"></div>
+        <div class="absolute inset-y-0 right-0 w-0.5 bg-slate-200/70"></div>
+      </div>
+      <div class="flex justify-between text-[10px] text-slate-500 mt-1.5"><span>0s</span><span>${f.min}s · earliest a child could read it</span></div>
+    </div>`;
+  }
+  if (f.type === 'struggle') return `
+    <div class="rounded-2xl bg-ink-900/80 border border-slate-700/60 p-5">
+      <div class="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-4">What the phone recorded</div>
+      <div class="grid grid-cols-3 gap-4">
+        <div><div class="text-3xl font-extrabold text-amber-300">${f.time}s</div><div class="text-xs text-slate-500 mt-1">Time on question</div></div>
+        <div><div class="text-3xl font-extrabold text-slate-200">${f.attempts}</div><div class="text-xs text-slate-500 mt-1">Different attempts</div></div>
+        <div><div class="text-3xl font-extrabold text-emerald-300">↗</div><div class="text-xs text-slate-500 mt-1">Getting closer each try</div></div>
+      </div></div>`;
+  if (f.type === 'hints') return `
+    <div class="rounded-2xl bg-ink-900/80 border border-slate-700/60 p-5">
+      <div class="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-4">What the phone recorded</div>
+      <div class="grid grid-cols-3 gap-4">
+        <div><div class="text-3xl font-extrabold text-indigo-300">${f.hints}</div><div class="text-xs text-slate-500 mt-1">Hints opened</div></div>
+        <div><div class="text-3xl font-extrabold text-slate-200">${s.attempts}</div><div class="text-xs text-slate-500 mt-1">Learn attempts</div></div>
+        <div><div class="text-3xl font-extrabold text-amber-300">${s.score}%</div><div class="text-xs text-slate-500 mt-1">Solo Score</div></div>
+      </div></div>`;
+  return `
+    <div class="rounded-2xl bg-ink-900/80 border border-slate-700/60 p-5">
+      <div class="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-4">What the phone recorded</div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><div class="text-3xl font-extrabold text-sky-300">${f.time}s</div><div class="text-xs text-slate-500 mt-1">On one question</div></div>
+        <div><div class="text-3xl font-extrabold text-slate-200">Low</div><div class="text-xs text-slate-500 mt-1">Touch activity</div></div>
+      </div></div>`;
+}
+
+function openInsight(pi, si) {
+  const p = pods[pi], s = p.students[si], m = INSIGHTS[s.flag.type];
+  const key = flagKey(pi, si);
+  $('#modalPanel').innerHTML = `
+    <div class="p-6 sm:p-8">
+      <div class="flex items-start gap-4 mb-6">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br ${AVATAR_GRADS[s.name]} grid place-items-center text-2xl shadow-lg shrink-0">${EMOJI[s.name]}</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-indigo-300 mb-1"><i class="fa-solid fa-brain"></i>Local AI Insight · ${m.label}</div>
+          <h3 class="text-xl font-extrabold text-white leading-snug">${m.headline}</h3>
+          <p class="text-xs text-slate-500 mt-1">${s.name} · ${s.role} · ${p.id} · Lesson ${p.code}</p>
+        </div>
+        <button id="closeModal" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition grid place-items-center"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="rounded-2xl bg-indigo-500/10 border border-indigo-400/20 p-4 mb-5">
+        <div class="text-[11px] uppercase tracking-widest text-indigo-300 font-semibold mb-1.5">Question</div>
+        <p class="text-sm text-slate-100">“${s.flag.q || 'Question data unavailable'}”</p>
+      </div>
+
+      ${telemetryViz(s)}
+
+      <div class="mt-5">
+        <h4 class="text-sm font-bold text-white mb-2 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass-chart text-purple-300"></i>What this likely means</h4>
+        <p class="text-sm text-slate-300 mb-3">${m.what}</p>
+        <ul class="space-y-2">${m.why.map(w => `<li class="flex gap-2.5 text-sm text-slate-400"><i class="fa-solid fa-circle text-[5px] mt-2 text-purple-400"></i><span>${w}</span></li>`).join('')}</ul>
+      </div>
+
+      <div class="mt-6 rounded-2xl bg-emerald-500/[.07] border border-emerald-400/20 p-5">
+        <h4 class="text-sm font-bold text-emerald-300 mb-3 flex items-center gap-2"><i class="fa-solid fa-lightbulb"></i>What you can do today</h4>
+        <ol class="space-y-2.5">${m.actions.map((a, i) => `<li class="flex gap-3 text-sm text-slate-200"><span class="shrink-0 w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold grid place-items-center">${i + 1}</span><span>${a}</span></li>`).join('')}</ol>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 mt-7">
+        <p class="text-[11px] text-slate-500 max-w-xs"><i class="fa-solid fa-circle-info mr-1"></i>Observed patterns suggest, but never prove, a cause. Use your own judgement.</p>
+        <div class="flex gap-2">
+          <button id="dismissBtn" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">${backPod != null ? 'Back to pod' : 'Close'}</button>
+          <button id="resolveBtn" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 shadow-lg shadow-emerald-900/40 transition active:scale-95"><i class="fa-solid fa-check mr-2"></i>Mark as addressed</button>
+        </div>
+      </div>
+    </div>`;
+  showModal();
+  $('#closeModal').onclick = hideModal;
+  $('#dismissBtn').onclick = () => backPod != null ? openPod(backPod) : hideModal();
+  $('#resolveBtn').onclick = () => { resolved.add(key); renderAll(); toast(`Marked ${s.name}'s insight as addressed`); backPod != null ? openPod(backPod) : hideModal(); };
+}
+function showModal() {
+  const m = $('#modal'); m.classList.remove('hidden'); void m.offsetWidth; m.classList.remove('modal-hidden');
+  document.body.style.overflow = 'hidden';
+}
+function hideModal() {
+  backPod = null; const m = $('#modal'); m.classList.add('modal-hidden');
+  setTimeout(() => { m.classList.add('hidden'); document.body.style.overflow = ''; }, 280);
+}
+$('#modalBackdrop').addEventListener('click', hideModal);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').classList.contains('hidden')) hideModal(); });
+
+/* =========================================================
+   ROUTER FEED
+   ========================================================= */
+function pushFeed(html, color = 'emerald') {
+  const feed = $('#routerFeed');
+  const div = document.createElement('div');
+  div.className = 'slide-up flex items-start gap-2.5 text-[11px] text-slate-400 bg-slate-800/40 rounded-xl px-3 py-2.5 border border-slate-800';
+  div.innerHTML = `<i class="fa-solid fa-arrow-right-arrow-left text-${color}-400 mt-0.5"></i><div class="flex-1 leading-snug">${html}<div class="text-[10px] text-slate-600 mt-0.5">${nowTime()}</div></div>`;
+  feed.prepend(div);
+  while (feed.children.length > 30) feed.lastChild.remove();
+}
+function randomPod() { const p = pods.filter(isSynced)[Math.floor(Math.random() * pods.filter(isSynced).length)]; return 'Lesson ' + p.code + ' · ' + p.id; }
+function tickFeed() { const f = feedMsgs[Math.floor(Math.random() * feedMsgs.length)]; pushFeed(f(randomPod())); }
+
+$('#simBtn').addEventListener('click', () => {
+  const live = pods.filter(isSynced), p = live[Math.floor(Math.random() * live.length)];
+  const kb = (1.5 + Math.random() * 1.2).toFixed(1);
+  p.synced = 'just now'; p.kb = +kb;
+  const cand = p.students.filter(s => !s.flag);
+  if (cand.length && Math.random() > .35) {
+    const s = cand[Math.floor(Math.random() * cand.length)];
+    const t = +(0.4 + Math.random() * 0.5).toFixed(1);
+    s.flag = { type: 'guessing', q: QUESTIONS.q2, time: t, min: 3.0, streak: 3 };
+    insightsGenerated++;
+    pushFeed(`Lesson ${p.code} · ${p.id} synced <b class="text-slate-200">${kb}kb</b> · <span class="text-rose-300">new AI flag</span>`, 'rose');
+    toast(`New insight from Lesson ${p.code} · ${p.id}: ${s.name} may be guessing`);
+  } else {
+    pushFeed(`Lesson ${p.code} · ${p.id} synced <b class="text-slate-200">${kb}kb</b>`);
+    toast(`Lesson ${p.code} · ${p.id} synced. No new flags.`);
+  }
+  renderTable(); renderStats();
+});
+
+/* =========================================================
+   AI LESSON STUDIO
+   ========================================================= */
+$$('.chip').forEach(c => c.addEventListener('click', () => { $('#contextInput').value = c.dataset.ctx; }));
+
+function buildLesson(topic, ctx) {
+  const T = topic.trim() || 'Fractions', C = ctx.trim() || 'a village activity';
+  const isFr = /fraction/i.test(T);
+  if (isFr) return [
+    { role: 'Reporter', icon: 'fa-microphone-lines', title: 'Equal parts', body: `Watch how ${C} starts by cutting one whole into equal parts. If the parts are not equal, the result will not work. Learn what "1 whole" and "equal parts" mean.`, check: 'If one whole is cut into 4 equal pieces, what is each piece called?' },
+    { role: 'Checker', icon: 'fa-check-double', title: 'Naming a fraction', body: `Take some of the pieces from ${C}. The bottom number tells how many equal parts exist in total, the top number tells how many you took.`, check: 'You take 3 of 4 equal pieces. Which fraction is that?' },
+    { role: 'Explainer', icon: 'fa-chalkboard-user', title: 'Comparing sizes', body: `Two helpers in ${C} each take a different share. More parts in the whole means each part is smaller. Compare 1/2 and 1/4 using real objects.`, check: 'Which is bigger, 1/2 or 1/4 of the same whole?' },
+    { role: 'Leader', icon: 'fa-crown', title: 'Adding like parts', body: `Combine two shares from ${C} that use the same size of piece. Add the tops, keep the bottom the same, and check the total is no bigger than one whole.`, check: '3/8 plus 2/8 is how much?' }
+  ];
+  return [
+    { role: 'Reporter', icon: 'fa-microphone-lines', title: `What is ${T}?`, body: `Observe how ${C} connects to ${T}. Learn the key words and describe what you noticed in your own words.`, check: `In one sentence, what is ${T}?` },
+    { role: 'Checker', icon: 'fa-check-double', title: `Spotting ${T}`, body: `Find two places in ${C} where ${T} appears. Learn how to tell whether something is an example or not.`, check: `Which of these is an example of ${T}?` },
+    { role: 'Explainer', icon: 'fa-chalkboard-user', title: `Why ${T} works`, body: `Learn the reason behind ${T} using ${C}. Be ready to explain it with an object you can hold.`, check: `Why does ${T} work the way it does?` },
+    { role: 'Leader', icon: 'fa-crown', title: `Using ${T}`, body: `Solve a small real problem from ${C} using ${T}. Plan the steps, then guide the pod through them.`, check: `Solve the problem using ${T}.` }
+  ];
+}
+
+const STEPS = [
+  'Loading llama3 into memory (local)',
+  'Reading topic and local context',
+  'Splitting the lesson into 4 jigsaw parts',
+  'Writing a Solo Check question for each part',
+  'Packaging lesson JSON and assigning Lesson Code'
+];
+let generating = false;
+
+$('#genBtn').addEventListener('click', () => {
+  if (generating) return;
+  const topic = $('#topicInput').value, ctx = $('#contextInput').value;
+  if (!topic.trim()) { toast('Please enter a topic first'); return; }
+  generating = true;
+  $('#genBtn').classList.add('opacity-60');
+  $('#studioEmpty').classList.add('hidden'); $('#studioResult').classList.add('hidden');
+  const prog = $('#studioProgress'); prog.classList.remove('hidden');
+  const bar = $('#progBar'), list = $('#progSteps');
+  bar.style.width = '0%'; list.innerHTML = '';
+  pushFeed('Lesson Studio: model started', 'purple');
+  STEPS.forEach((s, i) => {
+    setTimeout(() => {
+      if (i > 0) list.children[i - 1].innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 w-5"></i><span class="text-slate-300">${STEPS[i - 1]}</span>`;
+      const li = document.createElement('li');
+      li.className = 'flex items-center gap-2 fade-in';
+      li.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-300 w-5"></i><span class="text-slate-200">${s}…</span>`;
+      list.appendChild(li);
+      bar.style.width = ((i + 1) / STEPS.length * 92) + '%';
+    }, i * 750);
+  });
+  setTimeout(() => {
+    list.lastChild.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 w-5"></i><span class="text-slate-300">${STEPS[STEPS.length - 1]}</span>`;
+    bar.style.width = '100%';
+    setTimeout(() => finishLesson(topic, ctx), 400);
+  }, STEPS.length * 750);
+});
+
+function newPodCode() {
+  let c; do { c = String(Math.floor(1000 + Math.random() * 9000)); } while (pods.some(p => p.code === c));
+  return c;
+}
+
+function emojiFor(ctx) {
+  const c = ctx.toLowerCase();
+  const m = [['bamboo', '🎋'], ['rice', '🌾'], ['harvest', '🌾'], ['hornbill', '🦜'], ['feather', '🪶'], ['forest', '🌳'], ['river', '🌊'], ['shawl', '🧣'], ['weav', '🧵'], ['market', '🛍️'], ['pineapple', '🍍'], ['mango', '🥭'], ['festival', '🎉']];
+  for (const [k, e] of m) if (c.includes(k)) return e;
+  return '⭐';
+}
+/* Structured lesson JSON that the student app downloads with the Lesson Code */
+function structuredLesson(topic, ctx, code) {
+  const T = topic.trim() || 'Fractions', C = ctx.trim() || 'a village activity', fr = /fraction/i.test(T);
+  const parts = fr ? [
+    { title: 'Equal slices', story: 'Cut one whole into 4 equal slices.', point: 'Each slice is 1/4.', visual: { t: 's', total: 4, take: 1 },
+      q: { text: 'You take 1 of 4 slices. Fraction?', options: ['1/4', '1/2', '4/1'], answer: '1/4' },
+      hints: ['Count all slices. That is the bottom.', 'Bottom is 4. You took 1.'],
+      teach: { say: 'Say: 4 equal slices. One is 1/4.', show: 'Show: draw 4 slices. Colour 1.', ask: 'Ask: What is one slice?' } },
+    { title: 'Top and bottom', story: 'Take 2 of the 4 slices.', point: 'Top = taken. Bottom = all.', visual: { t: 's', total: 4, take: 2 },
+      q: { text: 'You take 2 of 4 slices. Fraction?', options: ['2/4', '4/2', '2/2'], answer: '2/4' },
+      hints: ['Top number is what you took.', 'Took 2. Total is 4. So 2 over 4.'],
+      teach: { say: 'Say: top is taken, bottom is all.', show: 'Show: colour 2 of 4 slices.', ask: 'Ask: What is 3 of 4?' } },
+    { title: 'Which is bigger?', story: 'Half is bigger than a quarter.', point: '1/2 is bigger than 1/4.', visual: { t: 'c' },
+      q: { text: 'Which is bigger?', options: ['1/2', '1/4', 'Same'], answer: '1/2' },
+      hints: ['More slices means smaller slices.', 'Half is 2 parts. Quarter is 4 parts.'],
+      teach: { say: 'Say: fewer parts, bigger piece.', show: 'Show: fold paper in 2, then 4.', ask: 'Ask: Is 1/3 or 1/5 bigger?' } },
+    { title: 'Add the slices', story: 'Add slices of the same size.', point: 'Add top. Keep bottom.', visual: { t: 'a' },
+      q: { text: '1/4 + 2/4 = ?', options: ['3/4', '3/8', '2/4'], answer: '3/4' },
+      hints: ['Same bottom. Only add the tops.', '1 + 2 = 3. Bottom stays 4.'],
+      teach: { say: 'Say: add tops. Keep the bottom.', show: 'Show: join 1 slice and 2 slices.', ask: 'Ask: What is 1/5 + 2/5?' } }
+  ] : [
+    ['What is ' + T + '?', 'Watch. Listen. Think.', 'Learn the key words.'],
+    ['Spot ' + T, 'Find it around you.', 'Look for clues.'],
+    ['Why ' + T + '?', 'Ask why it works.', 'Reasons matter.'],
+    ['Use ' + T, 'Try it for real.', 'Practise makes strong.']
+  ].map((a, i) => ({ title: a[0], story: a[1], point: a[2], visual: { t: 'n' },
+      q: { text: 'Part ' + (i + 1) + ': pick the true one.', options: [T + ' helps us learn', T + ' is not for us', 'Nobody knows'], answer: T + ' helps us learn' },
+      hints: ['Think about the story.', 'Pick the helpful idea.'],
+      teach: { say: 'Say: what I learned.', show: 'Show: use an object.', ask: 'Ask: Can you explain it?' } }));
+  const solo = fr ? [
+    { text: 'Cut in 8 equal parts. One part?', options: ['1/8', '1/4', '8/1'], answer: '1/8' },
+    { text: 'You take 3 of 4 parts. Fraction?', options: ['3/4', '4/3', '1/3'], answer: '3/4' },
+    { text: 'Which is bigger?', options: ['1/6', '1/3', 'Same'], answer: '1/3' },
+    { text: '2/5 + 1/5 = ?', options: ['3/5', '3/10', '2/5'], answer: '3/5' }
+  ] : [1, 2, 3, 4].map(n => ({ text: 'Check ' + n + ': pick the true one.', options: [T + ' helps us learn', T + ' is not for us', 'Nobody knows'], answer: T + ' helps us learn' }));
+  return { id: 'lesson-' + code, code, title: T + ' · ' + C, topic: T, context: C, emoji: emojiFor(C), placeholder: !fr, created: new Date().toISOString(), parts, solo };
+}
+function publishLesson(lesson) {
+  try { localStorage.setItem('sikho_lesson_' + lesson.code, JSON.stringify(lesson)); } catch (e) {}
+  try { window.parent !== window && window.parent.postMessage({ type: 'sikho-lesson-publish', lesson }, '*'); } catch (e) {}
+}
+
+function finishLesson(topic, ctx) {
+  const parts = buildLesson(topic, ctx), code = newPodCode();
+  const lesson = structuredLesson(topic, ctx, code); publishLesson(lesson);
+  $('#studioProgress').classList.add('hidden');
+  const res = $('#studioResult'); res.classList.remove('hidden');
+  const colors = ['sky', 'purple', 'indigo', 'emerald'];
+  res.innerHTML = `
+    <div class="glass-strong rounded-3xl p-6 slide-up flex flex-wrap items-center gap-6">
+      <div class="flex-1 min-w-[200px]">
+        <div class="text-[11px] uppercase tracking-widest text-emerald-300 font-bold mb-1"><i class="fa-solid fa-circle-check mr-1.5"></i>Lesson ready</div>
+        <h3 class="text-xl font-extrabold text-white">${topic} · ${ctx || 'Local context'}</h3>
+        <p class="text-xs text-slate-400 mt-1">4 jigsaw parts · 4 Solo Check questions · 14kb package</p>
+        <p class="text-xs text-indigo-300 mt-2"><i class="fa-solid fa-mobile-screen mr-1.5"></i>Kids type this code in the student app to download the lesson.${lesson.placeholder ? " (Demo: topics other than Fractions use placeholder questions.)" : ""}</p>
+      </div>
+      <div class="text-center">
+        <div class="text-[11px] uppercase tracking-widest text-slate-500 mb-1">Lesson Code</div>
+        <div class="flex gap-2" id="codeBoxes">${code.split('').map((d, i) => `<span class="w-12 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-3xl font-extrabold grid place-items-center shadow-lg slide-up" style="animation-delay:${i * 90}ms">${d}</span>`).join('')}</div>
+      </div>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-4">
+      ${parts.map((p, i) => `
+      <div class="glass rounded-3xl p-5 card-lift slide-up" style="animation-delay:${(i + 1) * 110}ms">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl bg-${colors[i]}-500/15 text-${colors[i]}-300 grid place-items-center"><i class="fa-solid ${p.icon}"></i></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Part ${i + 1} · ${p.role}</div><div class="font-bold text-white leading-tight">${p.title}</div></div>
+        </div>
+        <p class="text-sm text-slate-400 leading-relaxed mb-4">${p.body}</p>
+        <div class="rounded-xl bg-ink-900/80 border border-slate-700/60 p-3 text-xs"><span class="text-indigo-300 font-bold"><i class="fa-solid fa-circle-question mr-1"></i>Solo Check:</span> <span class="text-slate-300">${p.check}</span></div>
+      </div>`).join('')}
+    </div>
+    <div class="flex flex-wrap gap-3">
+      <button id="queueBtn" class="px-5 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 transition active:scale-95 shadow-lg shadow-emerald-900/40"><i class="fa-solid fa-cloud-arrow-down mr-2"></i>Queue for tomorrow's sync</button>
+      <button id="regenBtn" class="px-5 py-3 rounded-xl font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition"><i class="fa-solid fa-rotate mr-2"></i>Regenerate</button>
+    </div>`;
+  generating = false; $('#genBtn').classList.remove('opacity-60');
+  pushFeed(`Lesson packaged · Lesson Code <b class="text-slate-200">${code}</b>`, 'purple');
+  pushFeed(`Lesson ${code} published on router. Phones can download it.`, 'emerald');
+  insightsGenerated++; renderStats();
+  $('#queueBtn').onclick = e => {
+    e.currentTarget.disabled = true;
+    e.currentTarget.innerHTML = '<i class="fa-solid fa-check mr-2"></i>Queued on router';
+    pods.push({ code, lesson: `${topic} · ${ctx || 'Local context'}`, synced: 'waiting', kb: 0, students: [] });
+    pods.pop(); // demo only: keeps the telemetry table unchanged
+    pushFeed(`Lesson ${code} ready to download <b class="text-slate-200">14kb</b>`, 'emerald');
+    toast(`Lesson queued. Kids enter Lesson Code ${code}. Each phone is then Pod A, B, C or D.`);
+  };
+  $('#regenBtn').onclick = () => $('#genBtn').click();
+}
+
+/* =========================================================
+   ELDER STORIES
+   ========================================================= */
+function renderStories() {
+  const cm = { emerald: 'text-emerald-300 bg-emerald-500/15', indigo: 'text-indigo-300 bg-indigo-500/15', amber: 'text-amber-300 bg-amber-500/15', sky: 'text-sky-300 bg-sky-500/15', purple: 'text-purple-300 bg-purple-500/15', rose: 'text-rose-300 bg-rose-500/15' };
+  $('#storyGrid').innerHTML = stories.map((s, i) => `
+    <div class="glass rounded-3xl p-5 card-lift slide-up flex flex-col" style="animation-delay:${i * 70}ms">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-11 h-11 rounded-xl grid place-items-center ${cm[s.color]}"><i class="fa-solid ${s.icon}"></i></div>
+        <span class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${cm[s.color]}">${s.tag}</span>
+      </div>
+      <h4 class="font-bold text-white leading-snug">${s.title}</h4>
+      <p class="text-xs text-slate-500 mt-1 mb-3"><i class="fa-solid fa-user mr-1.5"></i>${s.elder}</p>
+      <p class="text-sm text-slate-400 leading-relaxed flex-1">${s.text}</p>
+      <div class="flex items-center gap-3 mt-4 pt-4 border-t border-slate-800">
+        <button class="play-btn w-9 h-9 rounded-full bg-slate-800 hover:bg-indigo-500/30 text-slate-300 hover:text-white transition grid place-items-center" data-i="${i}"><i class="fa-solid fa-play text-xs"></i></button>
+        <div class="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden"><div class="h-full w-0 bg-indigo-400 rounded-full" id="pbar-${i}"></div></div>
+        <span class="text-[11px] text-slate-500">${s.len}</span>
+      </div>
+      <button class="use-btn mt-3 w-full py-2.5 rounded-xl text-sm font-semibold text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/25 transition" data-i="${i}"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Use in Lesson Studio</button>
+    </div>`).join('');
+  $$('.use-btn').forEach(b => b.addEventListener('click', () => {
+    $('#contextInput').value = stories[+b.dataset.i].ctx; setTab('studio'); toast('Story context loaded into Lesson Studio');
+  }));
+  $$('.play-btn').forEach(b => b.addEventListener('click', () => {
+    const i = b.dataset.i, bar = $('#pbar-' + i); let w = 0; b.innerHTML = '<i class="fa-solid fa-pause text-xs"></i>';
+    const iv = setInterval(() => { w += 4; bar.style.width = w + '%'; if (w >= 100) { clearInterval(iv); b.innerHTML = '<i class="fa-solid fa-play text-xs"></i>'; setTimeout(() => bar.style.width = '0%', 600); } }, 120);
+  }));
+}
+$('#addStoryBtn').addEventListener('click', () => toast('Recording is a mobile feature in the next phase. Demo only.'));
+
+/* =========================================================
+   ROUTER INBOX, DOWNLOAD PACKAGE, ANALYSIS
+   Phone -> router inbox (JSON). Lab laptop -> downloads package.
+   ========================================================= */
+function applyPayload(p) {
+  const id = p.pod_id || 'Pod A';
+  let pi = pods.findIndex(x => x.code === p.pod_code && x.id === id);
+  if (pi < 0) { pods.push({ code: p.pod_code, id, phone: p.phone_id || 'Phone 1', lesson: p.lesson_title || 'New lesson', synced: 'just now', kb: p.size_kb, students: [] }); pi = pods.length - 1; }
+  const pod = pods[pi]; if (p.phone_id) pod.phone = p.phone_id;
+  p.students.forEach(stu => {
+    let si = pod.students.findIndex(x => x.name === stu.name);
+    if (si < 0) { pod.students.push({ name: stu.name, role: stu.role, attempts: 0, hints: 0, score: null, flag: null }); si = pod.students.length - 1; }
+    const s = pod.students[si];
+    s.role = stu.role; s.attempts = stu.learn.attempts; s.hints = stu.learn.hints_used;
+    s.score = Math.round(stu.solo.score / stu.solo.total * 100);
+    resolved.delete(flagKey(pi, si));
+    if (stu.summary.flag_fast_guess) s.flag = { type: 'guessing', q: stu.summary.flagged_question || QUESTIONS.q1, time: +(stu.summary.fastest_answer_ms / 1000).toFixed(1), min: 3.5, streak: stu.summary.fast_guess_count };
+    else if (stu.learn.hints_used >= 3) s.flag = { type: 'hints', q: stu.learn.attempt_log[0] ? stu.learn.attempt_log[0].question : QUESTIONS.q1, hints: stu.learn.hints_used };
+    else if (stu.learn.attempts >= 3) s.flag = { type: 'struggle', q: stu.learn.attempt_log[0].question, time: +(stu.learn.attempt_log.reduce((a, b) => a + b.time_ms, 0) / 1000).toFixed(1), attempts: stu.learn.attempts };
+    else s.flag = null;
+  });
+  pod.synced = 'just now'; pod.kb = p.size_kb; insightsGenerated++;
+}
+function processInbox() { const w = inbox.filter(f => !f.done && f.payload); w.forEach(f => { applyPayload(f.payload); f.done = true; f.at = 'just now'; }); return w.length; }
+function ingest(p) {
+  p.pod_id = p.pod_id || 'Pod A'; p.phone_id = p.phone_id || 'Phone 1';
+  const f = inboxItem(p, 'just now', false), old = inbox.findIndex(x => x.file === f.file); if (old >= 0) inbox.splice(old, 1);
+  inbox.unshift(f);
+  pushFeed(`${f.phone} uploaded <b class="text-slate-200">${f.file}</b> ${p.size_kb}kb to router`, 'emerald');
+  if (autoCollect) { processInbox(); toast(`${f.pod} (Lesson ${p.pod_code}) received from ${f.phone}`); renderAll(); setTab('telemetry'); }
+  else { toast(`${f.phone} uploaded to router. Press "Download package".`); renderAll(); }
+}
+function renderCollect() {
+  const w = inbox.filter(f => !f.done).length;
+  $('#inboxBody').innerHTML = inbox.map(f => `<tr class="border-b border-slate-800/60 row-hover"><td class="px-5 py-3 font-mono text-xs text-slate-200"><i class="fa-regular fa-file-code text-indigo-300 mr-2"></i>${f.file}</td><td class="px-3 py-3 text-xs text-slate-300">${f.phone}</td><td class="px-3 py-3 text-xs text-slate-300">${f.pod} <span class="text-slate-500">· Lesson ${f.code}</span></td><td class="px-3 py-3 text-xs text-slate-400">${f.kb}kb · ${f.at}</td><td class="px-3 py-3">${f.done ? '<span class="text-xs text-emerald-400"><i class="fa-solid fa-circle-check mr-1"></i>Downloaded</span>' : '<span class="text-xs font-bold text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-lg">Waiting on router</span>'}</td></tr>`).join('');
+  $('#topoInbox').textContent = `${w} new · ${inbox.length} files`;
+  $('#topoPhones').textContent = `${inbox.length} phones uploaded`;
+  [$('#dlBadge'), $('#navCollectBadge')].forEach(b => { b.textContent = w; b.classList.toggle('hidden', !w); });
+}
+function renderAll() { renderTable(); renderStats(); renderCollect(); }
+function startDownload() {
+  if (dlBusy) return; setTab('collect');
+  const w = inbox.filter(f => !f.done);
+  if (!w.length) { toast('Router inbox is empty. Nothing new to download.'); return; }
+  dlBusy = true; $('#openAnalysis').classList.add('hidden'); $('#topo').classList.add('flow');
+  const kb = w.reduce((a, f) => a + f.kb, 0).toFixed(1);
+  const steps = ['Finding router 192.168.0.1 on the lab LAN', 'Lab laptop signed in to router', `Downloading package · ${w.length} files · ${kb}kb`, 'Merging pods under their lesson codes', 'Running local analysis on each pod'];
+  const list = $('#dlSteps'); list.innerHTML = '';
+  steps.forEach((s, i) => setTimeout(() => {
+    if (i > 0) list.children[i - 1].innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 w-5"></i><span class="text-slate-300">${steps[i - 1]}</span>`;
+    const li = document.createElement('li'); li.className = 'flex items-center gap-2 fade-in';
+    li.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-300 w-5"></i><span class="text-slate-200">${s}…</span>`; list.appendChild(li);
+  }, i * 650));
+  setTimeout(() => {
+    list.lastChild.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 w-5"></i><span class="text-slate-300">${steps[steps.length - 1]}</span>`;
+    const n = processInbox(); dlBusy = false; $('#topo').classList.remove('flow');
+    pushFeed(`Package downloaded · <b class="text-slate-200">${n}</b> pod files analysed`, 'emerald'); toast(`${n} pod file${n > 1 ? 's' : ''} downloaded and analysed`);
+    renderAll(); $('#openAnalysis').classList.remove('hidden');
+  }, steps.length * 650);
+}
+$('#dlBtn').onclick = startDownload; $('#dlBtn2').onclick = startDownload;
+$('#openAnalysis').onclick = () => setTab('telemetry');
+$('#autoCol').onchange = e => { autoCollect = e.target.checked; };
+$('#importFile').onchange = async e => {
+  for (const f of e.target.files) { try { const j = JSON.parse(await f.text()); (Array.isArray(j) ? j : [j]).forEach(p => { ingest(p); }); } catch (err) { toast('Could not read ' + f.name); } }
+  processInbox(); renderAll(); e.target.value = '';
+};
+const seenSync = new Set();
+function ingestOnce(p) { const k = p.pod_code + '|' + p.pod_id + '|' + p.generated_at; if (seenSync.has(k)) return; seenSync.add(k); ingest(p); }
+function readOutbox() { try { JSON.parse(localStorage.getItem('sikho_outbox') || '[]').forEach(ingestOnce); } catch (e) {} }
+try { new BroadcastChannel('sikho').onmessage = e => { if (e.data && e.data.payload) ingestOnce(e.data.payload); }; } catch (e) {}
+addEventListener('storage', e => { if (e.key === 'sikho_outbox') readOutbox(); });
+window.addEventListener('message', e => { const d = e.data; if (d && d.type === 'sikho-sync' && d.payload) ingestOnce(d.payload); });
+
+/* =========================================================
+   INIT
+   ========================================================= */
+function tickClock() { $('#clock').textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }); }
+setInterval(tickClock, 1000); tickClock();
+
+renderAll(); renderStories(); setTab('telemetry'); readOutbox();
+['4092', '1187', '7350', '2264'].forEach((c, i) => setTimeout(() => pushFeed(feedMsgs[i % 2 === 0 ? 0 : 3](c)), i * 150));
+setInterval(tickFeed, 4500);
+</script>
+</body>
+</html>
