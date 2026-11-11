@@ -51,10 +51,10 @@ let POD_CODE = '';
 let LESSON_ID = '';
 
 const KIDS = [
-  { name: 'Hornbill', emoji: '🦜', role: 'Reporter',  grad: 'from-amber-400 to-orange-500' },
-  { name: 'Elephant', emoji: '🐘', role: 'Checker',   grad: 'from-slate-400 to-slate-500' },
-  { name: 'Panda',    emoji: '🐼', role: 'Explainer', grad: 'from-zinc-400 to-zinc-600' },
-  { name: 'Tiger',    emoji: '🐯', role: 'Leader',    grad: 'from-orange-400 to-red-500' }
+  { name: 'Hornbill', emoji: '🦜', grad: 'from-amber-400 to-orange-500' },
+  { name: 'Elephant', emoji: '🐘', grad: 'from-slate-400 to-slate-500' },
+  { name: 'Panda',    emoji: '🐼', grad: 'from-zinc-400 to-zinc-600' },
+  { name: 'Tiger',    emoji: '🐯', grad: 'from-orange-400 to-red-500' }
 ];
 
 const DEMO_PARTS = [
@@ -127,7 +127,7 @@ function freshState() {
   S = {
     screen: 'welcome', entry: '', conn: 'idle', connStep: 0, kid: 0, l: null, t: null, s: null, sync: 'idle', syncData: null, showJson: false,
     data: KIDS.map(k => ({
-      name: k.name, role: k.role,
+      name: k.name,
       learn: { part: null, attempts: 0, hints_used: 0, attempt_log: [], flag_fast_guess: false, completed: false },
       teach: { lock_seconds: TEACH_SECONDS, feedback: [], confused_count: 0 },
       solo: { score: 0, total: SOLO.length, answers: [], flag_fast_guess_count: 0 }
@@ -493,7 +493,7 @@ function generateSyncData() {
     const flagged = [...d.learn.attempt_log, ...d.solo.answers].find(a => a.flag_fast_guess);
     const fastCount = d.learn.attempt_log.filter(a => a.flag_fast_guess).length + d.solo.flag_fast_guess_count;
     return {
-      name: d.name, role: d.role,
+      name: d.name,
       learn: { ...d.learn },
       teach: { ...d.teach },
       solo: { ...d.solo },
