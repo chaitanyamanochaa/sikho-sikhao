@@ -239,27 +239,27 @@ const QUESTIONS = {
 };
 
 /* flag types: guessing | struggle | hints | stuck | ok */
-const st = (name, role, attempts, hints, score, flag = null) => ({ name, role, attempts, hints, score, flag });
-const waiting = a => a.map(([n, r]) => st(n, r, 0, 0, null));
+const st = (name, attempts, hints, score, flag = null) => ({ name, attempts, hints, score, flag });
+const waiting = a => a.map(n => st(n, 0, 0, null));
 const LT = 'Fractions · Bamboo weaving';
 /* one lesson CODE can be taught by many PODS (one phone each) */
 const pods = [
   { code: '4092', id: 'Pod A', phone: 'Phone 1', lesson: LT, synced: '2 min ago', kb: 2.1, students: [
-    st('Hornbill', 'Leader', 2, 0, 92), st('Elephant', 'Explainer', 3, 1, 78, { type: 'struggle', q: QUESTIONS.q3, time: 41.2, attempts: 3 }),
-    st('Panda', 'Checker', 1, 0, 34, { type: 'guessing', q: QUESTIONS.q1, time: 0.8, min: 3.5, streak: 4 }), st('Tiger', 'Reporter', 2, 2, 85) ] },
+    st('Hornbill', 2, 0, 92), st('Elephant', 3, 1, 78, { type: 'struggle', q: QUESTIONS.q3, time: 41.2, attempts: 3 }),
+    st('Panda', 1, 0, 34, { type: 'guessing', q: QUESTIONS.q1, time: 0.8, min: 3.5, streak: 4 }), st('Tiger', 2, 2, 85) ] },
   { code: '4092', id: 'Pod B', phone: 'Phone 2', lesson: LT, synced: '31 min ago', kb: 1.9, students: [
-    st('Pangolin', 'Checker', 2, 1, 87), st('Otter', 'Reporter', 2, 0, 93),
-    st('Python', 'Leader', 3, 2, 69, { type: 'struggle', q: QUESTIONS.q4, time: 38.6, attempts: 3 }), st('Eagle', 'Explainer', 1, 0, 97) ] },
-  { code: '4092', id: 'Pod C', phone: 'Phone 3', lesson: LT, synced: 'waiting', kb: 0, students: waiting([['Gibbon', 'Explainer'], ['Rhino', 'Reporter'], ['Loris', 'Leader'], ['Langur', 'Checker']]) },
-  { code: '4092', id: 'Pod D', phone: 'Phone 4', lesson: LT, synced: 'waiting', kb: 0, students: waiting([['Red Panda', 'Reporter'], ['Leopard', 'Leader'], ['Mithun', 'Checker'], ['Takin', 'Explainer']]) },
+    st('Pangolin', 2, 1, 87), st('Otter', 2, 0, 93),
+    st('Python', 3, 2, 69, { type: 'struggle', q: QUESTIONS.q4, time: 38.6, attempts: 3 }), st('Eagle', 1, 0, 97) ] },
+  { code: '4092', id: 'Pod C', phone: 'Phone 3', lesson: LT, synced: 'waiting', kb: 0, students: waiting(['Gibbon', 'Rhino', 'Loris', 'Langur']) },
+  { code: '4092', id: 'Pod D', phone: 'Phone 4', lesson: LT, synced: 'waiting', kb: 0, students: waiting(['Red Panda', 'Leopard', 'Mithun', 'Takin']) },
   { code: '5518', id: 'Pod A', phone: 'Phone 5', lesson: 'Water cycle · Reading the river', synced: '1 hr ago', kb: 2.0, students: [
-    st('Eagle', 'Leader', 1, 0, 88), st('Otter', 'Explainer', 2, 1, 76), st('Hornbill', 'Checker', 2, 0, 91),
-    st('Tiger', 'Reporter', 3, 2, 62, { type: 'struggle', q: QUESTIONS.q2, time: 35.0, attempts: 3 }) ] }
+    st('Eagle', 1, 0, 88), st('Otter', 2, 1, 76), st('Hornbill', 2, 0, 91),
+    st('Tiger', 3, 2, 62, { type: 'struggle', q: QUESTIONS.q2, time: 35.0, attempts: 3 }) ] }
 ];
 
 /* ---- Router inbox: JSON files uploaded by phones, waiting for the lab laptop ---- */
 function mk(code, title, pod, phone, rows) {
-  const students = rows.map(([n, r, a, h, sc, g]) => ({ name: n, role: r,
+  const students = rows.map(([n, a, h, sc, g]) => ({ name: n,
     learn: { attempts: a, hints_used: h, attempt_log: [{ question: QUESTIONS.q3, time_ms: 12000 + a * 4000 }] }, solo: { score: sc, total: 4 },
     summary: { fastest_answer_ms: g ? 700 : 5200, fast_guess_count: g ? 4 : 0, flag_fast_guess: !!g, flagged_question: g ? QUESTIONS.q1 : null } }));
   const p = { schema: 'sikho-sikhao/telemetry@1', pod_code: code, pod_id: pod, phone_id: phone, lesson_title: title, generated_at: new Date().toISOString(), students };
@@ -271,8 +271,8 @@ const inbox = [
   { file: '4092-PodA.json', code: '4092', pod: 'Pod A', phone: 'Phone 1', kb: 2.1, at: '2 min ago', done: true },
   { file: '4092-PodB.json', code: '4092', pod: 'Pod B', phone: 'Phone 2', kb: 1.9, at: '31 min ago', done: true },
   { file: '5518-PodA.json', code: '5518', pod: 'Pod A', phone: 'Phone 5', kb: 2.0, at: '1 hr ago', done: true },
-  inboxItem(mk('4092', LT, 'Pod C', 'Phone 3', [['Gibbon', 'Explainer', 2, 1, 3, 0], ['Rhino', 'Reporter', 1, 0, 1, 1], ['Loris', 'Leader', 3, 1, 4, 0], ['Langur', 'Checker', 2, 0, 3, 0]]), '6 min ago', false),
-  inboxItem(mk('4092', LT, 'Pod D', 'Phone 4', [['Red Panda', 'Reporter', 4, 4, 2, 0], ['Leopard', 'Leader', 1, 0, 4, 0], ['Mithun', 'Checker', 2, 1, 4, 0], ['Takin', 'Explainer', 2, 0, 3, 0]]), '11 min ago', false)
+  inboxItem(mk('4092', LT, 'Pod C', 'Phone 3', [['Gibbon', 2, 1, 3, 0], ['Rhino', 1, 0, 1, 1], ['Loris', 3, 1, 4, 0], ['Langur', 2, 0, 3, 0]]), '6 min ago', false),
+  inboxItem(mk('4092', LT, 'Pod D', 'Phone 4', [['Red Panda', 4, 4, 2, 0], ['Leopard', 1, 0, 4, 0], ['Mithun', 2, 1, 4, 0], ['Takin', 2, 0, 3, 0]]), '11 min ago', false)
 ];
 const codes = () => [...new Set(pods.map(p => p.code))];
 const podsOf = c => pods.map((p, i) => ({ p, i })).filter(x => x.p.code === c);
@@ -309,7 +309,7 @@ const INSIGHTS = {
     actions: [
       'Sit with the student and ask them to explain the concept <b>out loud using physical flashcards</b> or bamboo strips.',
       'Praise a slow, wrong answer in front of the pod to make careful thinking feel safe.',
-      'Ask the pod Checker to hold a "think-for-5" rule before the next Solo Check.',
+      'Ask the pod to hold a "think-for-5" rule before the next Solo Check.',
       'Re-run the part with a concrete object, then retest tomorrow.'
     ]
   },
@@ -340,7 +340,7 @@ const INSIGHTS = {
     actions: [
       'Agree on a "try first, then hint" rule with the student.',
       'Check the prerequisite skill with a quick 2-minute oral question.',
-      'Pair them with the Explainer for a short peer re-teach.',
+      'Pair them with a pod friend who solved it for a short peer re-teach.',
       'Celebrate the first question they solve without a hint.'
     ]
   },
@@ -452,11 +452,6 @@ function scoreBar(score) {
     <div class="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r ${color}" style="width:${score}%"></div></div>
     <span class="text-xs font-bold ${txt} w-9 text-right">${score}%</span></div>`;
 }
-const ROLE_STYLE = {
-  Reporter: 'bg-sky-500/15 text-sky-300', Checker: 'bg-purple-500/15 text-purple-300',
-  Explainer: 'bg-indigo-500/15 text-indigo-300', Leader: 'bg-emerald-500/15 text-emerald-300'
-};
-const ROLE_ICON = { Reporter: 'fa-microphone-lines', Checker: 'fa-check-double', Explainer: 'fa-chalkboard-user', Leader: 'fa-crown' };
 
 function flagCell(s, pi, si) {
   if (!s.flag) return `<span class="inline-flex items-center gap-1.5 text-xs text-emerald-400/90"><i class="fa-solid fa-circle-check"></i>On track</span>`;
@@ -505,7 +500,7 @@ function openPod(pi) {
     <div class="rounded-2xl bg-indigo-500/10 border border-indigo-400/20 p-4 mb-4 text-sm text-slate-200"><i class="fa-solid fa-brain text-indigo-300 mr-2"></i>${summ} of ${p.students.length} students reached the summit.${fl ? ` ${fl} student${fl > 1 ? 's need' : ' needs'} your attention. Tap a flag below.` : ' No open flags. This pod is on track.'}</div>
     ${p.students.map((s, si) => `<div class="flex items-center gap-3 py-3 border-t border-slate-800/70 flex-wrap">
       <div class="w-10 h-10 rounded-full bg-gradient-to-br ${AVATAR_GRADS[s.name]} grid place-items-center text-lg">${EMOJI[s.name]}</div>
-      <div class="w-28"><div class="font-semibold text-white text-sm">${s.name}</div><span class="text-[10px] font-semibold px-2 py-0.5 rounded ${ROLE_STYLE[s.role]}">${s.role}</span></div>
+      <div class="w-28"><div class="font-semibold text-white text-sm">${s.name}</div></div>
       <div class="text-[11px] text-slate-500 w-24">${s.attempts} tries · ${s.hints} hints</div>
       <div class="flex-1 min-w-[120px]">${scoreBar(s.score)}</div><div>${flagCell(s, pi, si)}</div></div>`).join('')}
   </div>`;
@@ -589,7 +584,7 @@ function openInsight(pi, si) {
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-indigo-300 mb-1"><i class="fa-solid fa-brain"></i>Local AI Insight · ${m.label}</div>
           <h3 class="text-xl font-extrabold text-white leading-snug">${m.headline}</h3>
-          <p class="text-xs text-slate-500 mt-1">${s.name} · ${s.role} · ${p.id} · Lesson ${p.code}</p>
+          <p class="text-xs text-slate-500 mt-1">${s.name} · ${p.id} · Lesson ${p.code}</p>
         </div>
         <button id="closeModal" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition grid place-items-center"><i class="fa-solid fa-xmark"></i></button>
       </div>
@@ -678,16 +673,16 @@ function buildLesson(topic, ctx) {
   const T = topic.trim() || 'Fractions', C = ctx.trim() || 'a village activity';
   const isFr = /fraction/i.test(T);
   if (isFr) return [
-    { role: 'Reporter', icon: 'fa-microphone-lines', title: 'Equal parts', body: `Watch how ${C} starts by cutting one whole into equal parts. If the parts are not equal, the result will not work. Learn what "1 whole" and "equal parts" mean.`, check: 'If one whole is cut into 4 equal pieces, what is each piece called?' },
-    { role: 'Checker', icon: 'fa-check-double', title: 'Naming a fraction', body: `Take some of the pieces from ${C}. The bottom number tells how many equal parts exist in total, the top number tells how many you took.`, check: 'You take 3 of 4 equal pieces. Which fraction is that?' },
-    { role: 'Explainer', icon: 'fa-chalkboard-user', title: 'Comparing sizes', body: `Two helpers in ${C} each take a different share. More parts in the whole means each part is smaller. Compare 1/2 and 1/4 using real objects.`, check: 'Which is bigger, 1/2 or 1/4 of the same whole?' },
-    { role: 'Leader', icon: 'fa-crown', title: 'Adding like parts', body: `Combine two shares from ${C} that use the same size of piece. Add the tops, keep the bottom the same, and check the total is no bigger than one whole.`, check: '3/8 plus 2/8 is how much?' }
+    { icon: 'fa-shapes', title: 'Equal parts', body: `Watch how ${C} starts by cutting one whole into equal parts. If the parts are not equal, the result will not work. Learn what "1 whole" and "equal parts" mean.`, check: 'If one whole is cut into 4 equal pieces, what is each piece called?' },
+    { icon: 'fa-tag', title: 'Naming a fraction', body: `Take some of the pieces from ${C}. The bottom number tells how many equal parts exist in total, the top number tells how many you took.`, check: 'You take 3 of 4 equal pieces. Which fraction is that?' },
+    { icon: 'fa-scale-balanced', title: 'Comparing sizes', body: `Two helpers in ${C} each take a different share. More parts in the whole means each part is smaller. Compare 1/2 and 1/4 using real objects.`, check: 'Which is bigger, 1/2 or 1/4 of the same whole?' },
+    { icon: 'fa-plus', title: 'Adding like parts', body: `Combine two shares from ${C} that use the same size of piece. Add the tops, keep the bottom the same, and check the total is no bigger than one whole.`, check: '3/8 plus 2/8 is how much?' }
   ];
   return [
-    { role: 'Reporter', icon: 'fa-microphone-lines', title: `What is ${T}?`, body: `Observe how ${C} connects to ${T}. Learn the key words and describe what you noticed in your own words.`, check: `In one sentence, what is ${T}?` },
-    { role: 'Checker', icon: 'fa-check-double', title: `Spotting ${T}`, body: `Find two places in ${C} where ${T} appears. Learn how to tell whether something is an example or not.`, check: `Which of these is an example of ${T}?` },
-    { role: 'Explainer', icon: 'fa-chalkboard-user', title: `Why ${T} works`, body: `Learn the reason behind ${T} using ${C}. Be ready to explain it with an object you can hold.`, check: `Why does ${T} work the way it does?` },
-    { role: 'Leader', icon: 'fa-crown', title: `Using ${T}`, body: `Solve a small real problem from ${C} using ${T}. Plan the steps, then guide the pod through them.`, check: `Solve the problem using ${T}.` }
+    { icon: 'fa-eye', title: `What is ${T}?`, body: `Observe how ${C} connects to ${T}. Learn the key words and describe what you noticed in your own words.`, check: `In one sentence, what is ${T}?` },
+    { icon: 'fa-magnifying-glass', title: `Spotting ${T}`, body: `Find two places in ${C} where ${T} appears. Learn how to tell whether something is an example or not.`, check: `Which of these is an example of ${T}?` },
+    { icon: 'fa-lightbulb', title: `Why ${T} works`, body: `Learn the reason behind ${T} using ${C}. Be ready to explain it with an object you can hold.`, check: `Why does ${T} work the way it does?` },
+    { icon: 'fa-screwdriver-wrench', title: `Using ${T}`, body: `Solve a small real problem from ${C} using ${T}. Plan the steps, then guide the pod through them.`, check: `Solve the problem using ${T}.` }
   ];
 }
 
@@ -805,7 +800,7 @@ function finishLesson(topic, ctx) {
       <div class="glass rounded-3xl p-5 card-lift slide-up" style="animation-delay:${(i + 1) * 110}ms">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-xl bg-${colors[i]}-500/15 text-${colors[i]}-300 grid place-items-center"><i class="fa-solid ${p.icon}"></i></div>
-          <div><div class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Part ${i + 1} · ${p.role}</div><div class="font-bold text-white leading-tight">${p.title}</div></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Part ${i + 1}</div><div class="font-bold text-white leading-tight">${p.title}</div></div>
         </div>
         <p class="text-sm text-slate-400 leading-relaxed mb-4">${p.body}</p>
         <div class="rounded-xl bg-ink-900/80 border border-slate-700/60 p-3 text-xs"><span class="text-indigo-300 font-bold"><i class="fa-solid fa-circle-question mr-1"></i>Solo Check:</span> <span class="text-slate-300">${p.check}</span></div>
@@ -872,9 +867,9 @@ function applyPayload(p) {
   const pod = pods[pi]; if (p.phone_id) pod.phone = p.phone_id;
   p.students.forEach(stu => {
     let si = pod.students.findIndex(x => x.name === stu.name);
-    if (si < 0) { pod.students.push({ name: stu.name, role: stu.role, attempts: 0, hints: 0, score: null, flag: null }); si = pod.students.length - 1; }
+    if (si < 0) { pod.students.push({ name: stu.name, attempts: 0, hints: 0, score: null, flag: null }); si = pod.students.length - 1; }
     const s = pod.students[si];
-    s.role = stu.role; s.attempts = stu.learn.attempts; s.hints = stu.learn.hints_used;
+    s.attempts = stu.learn.attempts; s.hints = stu.learn.hints_used;
     s.score = Math.round(stu.solo.score / stu.solo.total * 100);
     resolved.delete(flagKey(pi, si));
     if (stu.summary.flag_fast_guess) s.flag = { type: 'guessing', q: stu.summary.flagged_question || QUESTIONS.q1, time: +(stu.summary.fastest_answer_ms / 1000).toFixed(1), min: 3.5, streak: stu.summary.fast_guess_count };
